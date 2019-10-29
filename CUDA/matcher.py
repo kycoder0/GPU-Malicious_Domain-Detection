@@ -8,7 +8,7 @@ import math
 import time
 import random
 import os
-import resource
+#import resource
 import psutil
 class Matcher:
     def __init__(self, readpath):
@@ -33,6 +33,7 @@ class Matcher:
     def load_gpu(self):
 
         print(self.data)
+        print(len(self.data))
         self.data_gpu = cuda.mem_alloc(len(max(self.data, key=len)) * self.data.size * 8) # allocate memory
         cuda.memcpy_htod(self.data_gpu, self.data)
         self.max_length = len(max(self.data, key=len)) * 4

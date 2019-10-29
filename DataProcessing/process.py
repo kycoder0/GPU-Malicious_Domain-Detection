@@ -8,9 +8,13 @@
 
 import pandas as pd
 import sys
-directoryPath = '/home/trevor/Documents/MaliciousDomainDetection'
-sys.path.insert(1, directoryPath + '/Code/MySQL')
-import access
+import os
+path = os.getcwd()
+path = path[0: path.rfind('/')]
+directoryPath = path + "malicious-domain-detection"
+print(directoryPath)
+sys.path.insert(1, directoryPath + '/Code/MySQL/')
+from MySQL import access
 
 
 def printProgressBar (iteration, total, prefix = 'Inserting Data', suffix = '', decimals = 1, length = 50, fill = '█'):

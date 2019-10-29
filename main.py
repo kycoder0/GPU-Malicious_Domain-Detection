@@ -20,13 +20,13 @@ import PyQt5.QtCore as QtCore
 import CUDA.info as info
 import RDG.generator as gen
 
-localdatapath = '/tmp/localdata.csv'
+#localdatapath = '/tmp/localdata.csv'
 
 devices = info.Devices()
 
-db = "domains"
+#db = "domains"
 
-matcher = matcher.Matcher(localdatapath)
+#matcher = matcher.Matcher(localdatapath)
 
 class App(QMainWindow):
 
@@ -143,13 +143,13 @@ class TableWidget(QWidget):
         databaseLabel.move(250, 25)
         databaseLabel.resize(300, 150)
         databaseLabel.setWordWrap(True)
-        databaseLabel.setText("Use this section to manage domain data. Push the Add Data button to select a valid csv file to insert into our database. The file must be in the format of (0. Static IP, 2. Domain, 4. Time Stamp). Refresh Local Data will download the data from our database to a local file /tmp/localdata.csv. Scrape Data will allow you to scrape data from a given url and process it into the specified format.")
+        databaseLabel.setText("Use this section to manage domain data. Push the Add Data button to select a valid csv file to insert into our database. The file must be in the format of (0. Static IP, 2. Domain, 4. Time Stamp). Refresh Local Data will download the data from our database to a local file /tmp/localdata.csv.")# Scrape Data will allow you to scrape data from a given url and process it into the specified format.")
 
-        scrape = QPushButton(self.data_tab.group_box_database)
-        scrape.setText("Scrape Data")
-        scrape.resize(190, 40)
-        scrape.move(580, 80)
-        scrape.clicked.connect(self.scrape)
+        # scrape = QPushButton(self.data_tab.group_box_database)
+        # scrape.setText("Scrape Data")
+        # scrape.resize(190, 40)
+        # scrape.move(580, 80)
+        # scrape.clicked.connect(self.scrape)
 
         verticalSpacer1 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
         database_box.addItem(verticalSpacer1)
@@ -477,7 +477,7 @@ class TableWidget(QWidget):
             self.console.moveCursor(QTextCursor.End)
             process.insert_data(file[0], 10000, database, 'Connection')
             database.to_csv('Connection', localdatapath)
-            self.console_append("Finished adding data", True)
+            self.console_append("Finished adding data")
             self.console_write("", True)
         else:
             self.console_write("Please select a valid .csv file", True)
