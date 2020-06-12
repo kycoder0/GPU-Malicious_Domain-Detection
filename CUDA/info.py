@@ -22,7 +22,7 @@ class Devices:
             for k, v in device_attributes_tuples:
                 device_attributes[str(k)] = v
             num_mp = device_attributes['MULTIPROCESSOR_COUNT']
-            cuda_cores_per_mp = { 5.0 : 128, 5.1 : 128, 5.2 : 128, 6.0 : 64, 6.1 : 128, 6.2 : 128}[compute_capability]
+            cuda_cores_per_mp = { 5.0 : 128, 5.1 : 128, 5.2 : 128, 6.0 : 64, 6.1 : 128, 6.2 : 128, 7.5 : 128}[compute_capability]
             info += '\t ({}) Multiprocessors, ({}) CUDA Cores / Multiprocessor: {} CUDA Cores'.format(num_mp, cuda_cores_per_mp, num_mp*cuda_cores_per_mp) + '\n'
             device_attributes.pop('MULTIPROCESSOR_COUNT')
             for k in device_attributes.keys():
