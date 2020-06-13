@@ -7,6 +7,7 @@
 
 import MySQLdb
 import os
+import csv
 class Connection:
 
     def __init__(self, host, user, passwd, database):
@@ -101,5 +102,13 @@ class Connection:
         """
         if os.path.exists(into):
             os.remove(into)
-        sql = 'select * from ' + tablename + ' into outfile \'' + into + '\' fields terminated by ' + "','" +' lines terminated by ' + "'\n'"
+        sql = 'select * from ' + tablename
+        #+ ' into outfile ' + "'" + into + "'" + ' fields terminated by ' + "','" +' lines terminated by ' + "'\n'"
+        #print(sql)
         self.cursor.execute(sql)
+        rows = self.cursor.fetchall()
+
+        with open(into, 'w') as f:
+            myFile = csv.writer(f)
+            myFile.writerows(rows)
+

@@ -61,20 +61,31 @@ def check_libraries():
     except ImportError:
         libraries_not_found.append('time')
 
+    try:
+        import csv
+    except ImportError:
+        libraries_not_found.append('csv')
+        
     if len(libraries_not_found) > 0:
         print(Fore.RED + 'You need to install the following libraries:')
         for library in libraries_not_found:
             print('   *' + Fore.RED + library)
+        print()
         return False
+    print(Fore.GREEN + 'All libraries installed')
     return True
 
-def check_db_connection():
+
+def read_db_info():
     path_to_db_info = directoryPath + '\dbinfo.json'
     if not path.exists(path_to_db_info):
         print(Fore.RED + "dbinfo.json doesn't exist in this directory. Please refer to the documentation in README.md to set up this file.")
         return False
     with open(path_to_db_info) as f:
         data = json.load(f)
+    return data
+def check_db_connection():
+    data = read_db_info()
     address = data['address']
     username = data['username']
     password = data['password']
@@ -86,17 +97,30 @@ def check_db_connection():
         print(Fore.RED + 'While attempting to connect, the following exceptions occured: ')
         print(e)
         return False
-    print(Fore.GREEN + "Connection Successful!")
+    print(Fore.GREEN + "Connection Successful!\n")
 
     return database
 
+def create_local_data(db):
+    print(Fore.CYAN + 'Attempting to copy database into local csv...')
+    path_to_data = directoryPath + '\localdata.csv'
+    print(Fore.YELLOW + 'Attempting to write to ' + path_to_data)
+    data = read_db_info()
+    database_name = data['name']
+
+    db.to_csv('dataset', path_to_data)
+    print(Fore.GREEN + 'Successfully wrote data to localdata.csv')
 
 def main():
-    print(Fore.YELLOW + 'Starting setup...')
+    print(Fore.YELLOW + 'Starting setup...\n')
     db = check_db_connection()
     reqs = check_libraries()
     if not (db and reqs):
         sys.exit(1)
-    print(Fore.GREEN + 'Set up complete!')
+    print()
+
+    create_local_data(db)
+    
+
 if __name__ == "__main__":
     main()
