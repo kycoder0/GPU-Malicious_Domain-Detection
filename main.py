@@ -16,7 +16,7 @@ from colorama import Fore, Back, Style
 # sys.path.insert(1, directoryPath + '/Code')
 import MySQL.access as access
 # import DataProcessing.process as process
-# import CUDA.matcher as matcher
+import CUDA.matcher
 # import pandas as pd
 # import time
 # import CUDA.info as info
@@ -65,7 +65,7 @@ def check_libraries():
         import csv
     except ImportError:
         libraries_not_found.append('csv')
-        
+
     if len(libraries_not_found) > 0:
         print(Fore.RED + 'You need to install the following libraries:')
         for library in libraries_not_found:
@@ -109,7 +109,12 @@ def create_local_data(db):
     database_name = data['name']
 
     db.to_csv('dataset', path_to_data)
-    print(Fore.GREEN + 'Successfully wrote data to localdata.csv')
+    print(Fore.GREEN + 'Successfully wrote data to localdata.csv\n')
+
+def create_matcher():
+    path_to_data = directoryPath + '\localdata.csv'
+    matcher = CUDA.matcher.Matcher(path_to_data)
+    return matcher
 
 def main():
     print(Fore.YELLOW + 'Starting setup...\n')
@@ -121,6 +126,18 @@ def main():
 
     create_local_data(db)
     
+    matcher = create_matcher()
+    matcher.load_gpu()
+
+    while (True):
+        sample_domain = input(Fore.YELLOW + 'Enter a domain to be checked: ')
+        result = matcher.is_malicious(sample_domain)
+
+        if (result == 1):
+            print(Fore.YELLOW + f'"{sample_domain}" is malicious')
+        else:
+            print(Fore.YELLOW + f'"{sample_domain}" is benign')
+        print()
 
 if __name__ == "__main__":
     main()

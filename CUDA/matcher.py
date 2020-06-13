@@ -19,7 +19,7 @@ class Matcher:
         """
         self.readpath = readpath
         fileName = self.readpath[self.readpath.rfind('/') + 1:]
-        print('Reading ' + fileName + '...')
+        #print('Reading ' + fileName + '...')
         df = pd.read_csv(self.readpath, encoding = "ISO-8859-1", sep = ',', names = list(range(0,3)), dtype='unicode')
 
         df = df.drop([df.columns[0], df.columns[2]], axis = 'columns')
@@ -32,8 +32,7 @@ class Matcher:
 
     def load_gpu(self):
 
-        print(self.data)
-        print(len(self.data))
+        
         self.data_gpu = cuda.mem_alloc(len(max(self.data, key=len)) * self.data.size * 8) # allocate memory
         cuda.memcpy_htod(self.data_gpu, self.data)
         self.max_length = len(max(self.data, key=len)) * 4
