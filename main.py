@@ -8,6 +8,7 @@ from os import path
 from colorama import init
 init()
 from colorama import Fore, Back, Style
+import pandas as pd
 # print(Fore.RED + 'some red text')
 # print(Back.GREEN + 'and with a green background')
 # print(Style.DIM + 'and in dim text')
@@ -96,7 +97,7 @@ def check_db_connection():
     except (MySQLdb.Error) as e:
         print(Fore.RED + 'While attempting to connect, the following exceptions occured: ')
         print(e)
-        return False
+        sys.exit(1)
     print(Fore.GREEN + "Connection Successful!\n")
 
     return database
@@ -116,6 +117,73 @@ def create_matcher():
     matcher = CUDA.matcher.Matcher(path_to_data)
     return matcher
 
+def select_matching_algorithm():
+    print(Fore.YELLOW + '''
+        1. Naive
+        2. KMP
+        3. 
+    ''')
+    selection = input('Select Algorithm: ')
+    while selection not in ['1', '2', '3']:
+        selection = input(Fore.RED + 'Invalid selection. ' + Fore.YELLOW + 'Please try again: ')
+    
+    return {'1': 'Naive', '2': 'KMP', '3': ' '}.get(selection)
+
+def simple_search( matcher):
+    sample_domain = input(Fore.YELLOW + 'Enter a domain to be checked: ')
+    result = matcher.is_malicious(sample_domain)
+    if (result == 1):
+            print(Fore.YELLOW + f'"{sample_domain}" is malicious')
+    else:
+        print(Fore.YELLOW + f'"{sample_domain}" is benign')
+    print()
+
+def display_menu(matcher):
+    print(Fore.YELLOW + '''
+    1. Select a matching algorithm (Naive default)
+    2. Enter 1 domain for checking
+    3. Check file for malicious domains
+    ''')
+
+    selection = input('Make a selection: ')
+    while selection not in ['1', '2', '3']:
+        selection = input(Fore.RED + 'Invalid selection. ' + Fore.YELLOW + 'Please try again: ')
+    complete_menu_select(selection, matcher)
+    return selection
+selected_algorithm = "Naive"
+def complete_menu_select(selection, matcher):
+    if selection == '1':
+        #algorithm_number = select_matching_algorithm()
+        selected_algorithm = select_matching_algorithm()
+    elif selection == '2':
+        simple_search(matcher)
+    elif selection == '3':
+        input_path = input(Fore.YELLOW + 'Enter path to input: ')
+        while not os.path.isfile(input_path):
+            input_path = input(Fore.RED + 'File not found. ' + Fore.YELLOW + 'Enter path to input: ')
+        print(Fore.CYAN + 'Outpath will be in top level folder of this program')
+        data = parse_domain_column(input_path)
+        print(data)
+        matcher.gpu_run(data)
+def parse_domain_column(input_path):
+        data = pd.read_csv(input_path, encoding = "ISO-8859-1", sep = ',', dtype='unicode', header = None)
+        col_num = get_column_number(len(data.columns))
+        data = data[data.columns[col_num]]
+        data = data.to_frame()
+        return data
+
+def get_column_number(max):
+    col_num = input(Fore.YELLOW + 'Enter the column that contains the domains: ')
+    try:
+        num = int(col_num)
+        if num < max:
+            return int(col_num)
+        print(Fore.RED + "Invalid entry for Column #")
+        return get_column_number(max)
+    except ValueError:
+        print(Fore.RED + "Invalid entry for Column #")
+        return get_column_number(max)
+
 def main():
     print(Fore.YELLOW + 'Starting setup...\n')
     db = check_db_connection()
@@ -129,15 +197,9 @@ def main():
     matcher = create_matcher()
     matcher.load_gpu()
 
+ 
     while (True):
-        sample_domain = input(Fore.YELLOW + 'Enter a domain to be checked: ')
-        result = matcher.is_malicious(sample_domain)
-
-        if (result == 1):
-            print(Fore.YELLOW + f'"{sample_domain}" is malicious')
-        else:
-            print(Fore.YELLOW + f'"{sample_domain}" is benign')
-        print()
+        display_menu(matcher)
 
 if __name__ == "__main__":
     main()

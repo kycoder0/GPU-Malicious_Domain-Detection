@@ -34,6 +34,7 @@ class Matcher:
 
         
         self.data_gpu = cuda.mem_alloc(len(max(self.data, key=len)) * self.data.size * 8) # allocate memory
+        #print(len(max(self.data, key=len)) * self.data.size * 8)
         cuda.memcpy_htod(self.data_gpu, self.data)
         self.max_length = len(max(self.data, key=len)) * 4
         self.mod = SourceModule("""
@@ -43,9 +44,11 @@ class Matcher:
             if(flag[0] == 1) {
                 return;
             }
+
+            
             int blockId = blockIdx.y * gridDim.x + blockIdx.x;
             int idx = length[0] * (blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x);
-
+            //printf("length:%d blockId:%d threadY:%d threadX:%d\\n", length[0], blockId, threadIdx.y, threadIdx.x);
             int tempFlag = 1;
             for (int i = idx; i < length[0] + idx; i += 4) {
                 if (data[i] != word[i-idx]) {
@@ -56,9 +59,7 @@ class Matcher:
             if(tempFlag == 1) {
                 flag[0] = 1;
             }
-
           }
-
           """)
         self.func = self.mod.get_function("kernel")
 

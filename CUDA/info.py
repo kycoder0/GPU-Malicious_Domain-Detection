@@ -28,4 +28,9 @@ class Devices:
             for k in device_attributes.keys():
                 info += '\t {}: {}'.format(k, device_attributes[k])
                 info += '\n'
+
             return info
+
+device = Devices()
+
+print(device.get_info(0))
