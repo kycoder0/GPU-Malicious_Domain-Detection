@@ -117,7 +117,7 @@ def create_matcher():
     matcher = CUDA.matcher.Matcher(path_to_data)
     return matcher
 
-def select_matching_algorithm():
+def select_matching_algorithm(matcher):
     print(Fore.YELLOW + '''
         1. Naive
         2. KMP
@@ -127,11 +127,12 @@ def select_matching_algorithm():
     while selection not in ['1', '2', '3']:
         selection = input(Fore.RED + 'Invalid selection. ' + Fore.YELLOW + 'Please try again: ')
     
+    matcher.set_algorithm({'1': 'Naive', '2': 'KMP', '3': ' '}.get(selection))
     return {'1': 'Naive', '2': 'KMP', '3': ' '}.get(selection)
 
 def simple_search( matcher):
     sample_domain = input(Fore.YELLOW + 'Enter a domain to be checked: ')
-    result = matcher.is_malicious(sample_domain)
+    result = matcher.is_malicious(sample_domain, 'GPU')
     if (result == 1):
             print(Fore.YELLOW + f'"{sample_domain}" is malicious')
     else:
@@ -154,7 +155,7 @@ selected_algorithm = "Naive"
 def complete_menu_select(selection, matcher):
     if selection == '1':
         #algorithm_number = select_matching_algorithm()
-        selected_algorithm = select_matching_algorithm()
+        selected_algorithm = select_matching_algorithm(matcher)
     elif selection == '2':
         simple_search(matcher)
     elif selection == '3':

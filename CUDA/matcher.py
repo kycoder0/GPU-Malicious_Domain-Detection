@@ -26,17 +26,19 @@ class Matcher:
         self.data = df.values # numpy array
         self.data = self.data.ravel() # transforms the dataframe into a single column
         self.data = self.data.astype(numpy.str)
+        self.set_to_naive()
+        self.algorithm = 'Naive'
+
     def unload_gpu(self):
         data_changed = numpy.empty_like(self.data)
         cuda.memcpy_dtoh(data_changed, self.data_gpu)
 
-    def load_gpu(self):
 
-        
-        self.data_gpu = cuda.mem_alloc(len(max(self.data, key=len)) * self.data.size * 8) # allocate memory
-        #print(len(max(self.data, key=len)) * self.data.size * 8)
-        cuda.memcpy_htod(self.data_gpu, self.data)
-        self.max_length = len(max(self.data, key=len)) * 4
+    def set_to_kmp(self):
+
+        self.algorithm = 'KMP'
+
+    def set_to_naive(self):
         self.mod = SourceModule("""
             #include <stdio.h>
           __global__ void kernel(char *data, char *word, char *flag, int *length)
@@ -45,7 +47,6 @@ class Matcher:
                 return;
             }
 
-            
             int blockId = blockIdx.y * gridDim.x + blockIdx.x;
             int idx = length[0] * (blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x);
             //printf("length:%d blockId:%d threadY:%d threadX:%d\\n", length[0], blockId, threadIdx.y, threadIdx.x);
@@ -61,47 +62,56 @@ class Matcher:
             }
           }
           """)
+        self.algorithm = 'Naive'
+    def set_algorithm(self, name):
+        if name == 'KMP':
+            self.set_to_kmp()
+        else:
+            self.set_to_naive()
+
+
+    def load_gpu(self):
+        self.data_gpu = cuda.mem_alloc(len(max(self.data, key=len)) * self.data.size * 8) # allocate memory
+        #print(len(max(self.data, key=len)) * self.data.size * 8)
+        cuda.memcpy_htod(self.data_gpu, self.data)
+        self.max_length = len(max(self.data, key=len)) * 4
+        
         self.func = self.mod.get_function("kernel")
 
-    def is_malicious(self, word):
-        """
-        This function sets up our temporary variables and calls our kernel that
-        resides on our GPU threads to check if our domain is malicious or not
-        @params:
-            word: the domain to be searched for
-        """
-        # initializing our variables
-        word = numpy.asarray(word)
-        flag = numpy.asarray(0)
-        length = numpy.int32(self.max_length)
 
-        # allocating memory for our variables on the GPU
-        word_gpu = cuda.mem_alloc(self.max_length * 8)
-        flag_gpu = cuda.mem_alloc(32)
-        length_gpu = cuda.mem_alloc(length.nbytes)
+    def is_malicious_naive_gpu(self, word):
+            # initializing our variables
+            word = numpy.asarray(word)
+            flag = numpy.asarray(0)
+            length = numpy.int32(self.max_length)
 
-        # putting the variables into the GPU memory we allocated
-        cuda.memcpy_htod(word_gpu, word)
-        cuda.memcpy_htod(flag_gpu, flag)
-        cuda.memcpy_htod(length_gpu, length)
+            # allocating memory for our variables on the GPU
+            word_gpu = cuda.mem_alloc(self.max_length * 8)
+            flag_gpu = cuda.mem_alloc(32)
+            length_gpu = cuda.mem_alloc(length.nbytes)
 
-        # calculating the number of blocks we need for our data
-        grid_size = int((self.data.size/1024)**(0.5))
+            # putting the variables into the GPU memory we allocated
+            cuda.memcpy_htod(word_gpu, word)
+            cuda.memcpy_htod(flag_gpu, flag)
+            cuda.memcpy_htod(length_gpu, length)
 
-        # calling our kernel
-        self.func(self.data_gpu, word_gpu, flag_gpu, length_gpu, grid = (grid_size + 1, grid_size + 1, 1), block=(32, 32,1))
+            # calculating the number of blocks we need for our data
+            grid_size = int((self.data.size/1024)**(0.5))
 
-        # cleaning the variables from our GPU, since we didn't clean up the
-        # database data, it is still stored on the GPU, ready for a new search
-        word_changed = numpy.empty_like(word)
-        flag_changed = numpy.empty_like(flag)
-        length_changed = numpy.empty_like(length)
-        cuda.memcpy_dtoh(word_changed, word_gpu)
-        cuda.memcpy_dtoh(flag_changed, flag_gpu)
-        cuda.memcpy_dtoh(length_changed, length_gpu)
-        return flag_changed # return if the flag has been changed to 1
+            # calling our kernel
+            self.func(self.data_gpu, word_gpu, flag_gpu, length_gpu, grid = (grid_size + 1, grid_size + 1, 1), block=(32, 32,1))
 
-    def is_malicious_cpu(self, word):
+            # cleaning the variables from our GPU, since we didn't clean up the
+            # database data, it is still stored on the GPU, ready for a new search
+            word_changed = numpy.empty_like(word)
+            flag_changed = numpy.empty_like(flag)
+            length_changed = numpy.empty_like(length)
+            cuda.memcpy_dtoh(word_changed, word_gpu)
+            cuda.memcpy_dtoh(flag_changed, flag_gpu)
+            cuda.memcpy_dtoh(length_changed, length_gpu)
+            return flag_changed # return if the flag has been changed to 1
+
+    def is_malicious_naive_cpu(self, word):
         """
         Simple Python function that essentially does the same thing as our GPU
         algorithm, however, uses the CPU instead
@@ -115,6 +125,40 @@ class Matcher:
             if x == word:
                 found = True
         return found
+
+    def is_malicious_naive(self, word, hardware):
+
+        if hardware == 'GPU':
+            return self.is_malicious_naive_gpu(word)
+        else:
+            return self.is_malicious_naive_cpu(word)
+
+
+    def is_malicioius_kmp_gpu(self, word):
+        pass
+
+    def is_malicioius_kmp_cpu(self, word):
+        pass
+
+    def is_malicioius_kmp(self, word, hardware):
+        if hardware == 'GPU':
+            return self.is_malicious_kmp_gpu(word)
+        else:
+            return self.is_malicious_kmp_cpu(word)
+    def is_malicious(self, word, hardware):
+        """
+        This function sets up our temporary variables and calls our kernel that
+        resides on our GPU threads to check if our domain is malicious or not
+        @params:
+            word: the domain to be searched for
+        """
+
+        if self.algorithm == 'Naive':
+            return self.is_malicious_naive(word, hardware)
+        elif self.algorithm == 'KMP':
+            return self.is_malicioius_kmp(word, hardware)
+
+    
 
     def time_diff(self, num_samples):
         """
