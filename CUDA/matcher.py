@@ -24,8 +24,11 @@ class Matcher:
 
         df = df.drop([df.columns[0], df.columns[2]], axis = 'columns')
         self.data = df.values # numpy array
+        print(self.data)
         self.data = self.data.ravel() # transforms the dataframe into a single column
+        print(self.data)
         self.data = self.data.astype(numpy.str)
+        print(self.data)
         self.set_to_naive()
         self.algorithm = 'Naive'
 
@@ -35,7 +38,6 @@ class Matcher:
 
 
     def set_to_kmp(self):
-
         self.algorithm = 'KMP'
 
     def set_to_naive(self):
@@ -69,15 +71,187 @@ class Matcher:
         else:
             self.set_to_naive()
 
-
     def load_gpu(self):
         self.data_gpu = cuda.mem_alloc(len(max(self.data, key=len)) * self.data.size * 8) # allocate memory
         #print(len(max(self.data, key=len)) * self.data.size * 8)
         cuda.memcpy_htod(self.data_gpu, self.data)
+        print('max len = ' + str(len(max(self.data, key=len))))
         self.max_length = len(max(self.data, key=len)) * 4
         
         self.func = self.mod.get_function("kernel")
 
+    # def set_to_levenshtein(self):
+    #     self.mod = SourceModule("""
+    #         #include <stdio.h>
+    #       __global__ void kernel(char *data, char *word, int *length, int *distances, int *word_len)
+    #       {
+    #         //dp[0][0] = 1;
+    #         int blockId = blockIdx.y * gridDim.x + blockIdx.x;
+    #         int distances_idx = (blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x);
+    #         int data_idx = length[0] * (blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x);
+    #         printf("%c \\n", data[data_idx]);
+    #         int distance = 0;
+    #         for (int i = 0; i < length[0]; i++) {
+    #             //printf("%c", data[data_idx + 4*i]);
+    #             if (i < word_len[0]) {
+    #                 if (data[data_idx + 4*i] != word[i*4]) {
+    #                     distance += 1;
+    #                 }
+    #             }
+    #          //  printf("\\n");
+    #         }
+    #         //printf("%d\\n", distance);
+    #         distances[distances_idx] = distance;
+    #     }
+    #         """)
+
+    
+    def set_to_levenshtein(self):
+        self.mod = SourceModule("""
+            #include <stdio.h>
+          __global__ void kernel(char *data, char *word, int *length, int *distances, int *word_len)
+          {
+            //dp[0][0] = 1;
+            int blockId = blockIdx.y * gridDim.x + blockIdx.x;
+            int distances_idx = (blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x);
+            int data_idx = length[0] * (blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x);
+
+            //printf("%d\\n", distances[distances_idx]);
+            //distances[distances_idx] = 0;
+
+            int dp [250][250];
+           // int len = length[0];
+           int len = length[0]/4;
+           //printf("%d %d", len, word_len[0]);
+            for (int i = 0; i <= len; i++) {
+                for (int j = 0; j <= word_len[0]; j++) {
+                    dp[i][j] = 0;
+                }
+            }
+
+            for (int i = 0; i <= len; i++) {
+                dp[i][0] = i;
+            }
+
+            for (int j = 0; j <= word_len[0]; j++) {
+                dp[0][j] = j;
+            }
+
+            int val1 = 0;
+            int val2 = 0;
+            int val3 = 0;
+            
+            for (int i = 1; i <= len; i++) {
+                for (int j = 1; j <= word_len[0]; j++) {
+                    //printf("%c", data[data_idx + (i - 1)*4]);
+                    if (data[data_idx + (j - 1)*4] == word[(i-1)*4]) {
+                        val1 = dp[i - 1][j] + 1;
+                        val2 = dp[i - 1][j - 1];
+                        val3 = dp[i][j - 1] + 1;
+                        if (val1 < val2) {
+                            if (val1 < val3) {
+                                dp[i][j] = val1;
+                            }
+                            else {
+                                dp[i][j] = val3;
+                            }
+                        }
+                        else {
+                            if (val2 < val3) {
+                                dp[i][j] = val2;
+                            }
+                            else {
+                                dp[i][j] = val3;
+                            }
+                        }
+                    }
+                    else {
+                        val1 = dp[i - 1][j] + 1;
+                        val2 = dp[i - 1][j - 1] + 1;
+                        val3 = dp[i][j - 1] + 1;
+                        if (val1 < val2) {
+                            if (val1 < val3) {
+                                dp[i][j] = val1;
+                            }
+                            else {
+                                dp[i][j] = val3;
+                            }
+                        }
+                        else {
+                            if (val2 < val3) {
+                                dp[i][j] = val2;
+                            }
+                            else {
+                                dp[i][j] = val3;
+                            }
+                        }
+                    }
+                }
+                //printf("\\n");
+            }
+            
+            distances[distances_idx] = dp[len][word_len[0]];
+            //free(dp);
+            //printf("%d", distances[distances_idx]);
+          }
+          """)
+    def get_levenshtein_distance(self, word):
+
+        print(len(self.data))
+        distances = [0 for x in range(len(self.data))]
+        print(self.max_length)
+        # dp = [[0 for x in range(self.max_length//4)] for i in range(self.max_length//4)]
+        #print(dp)
+         # initializing our variables
+        word_len = len(word)
+        word = numpy.asarray(word)
+        flag = numpy.asarray(0)
+        length = numpy.int32(self.max_length)
+        distances = numpy.asarray(distances)
+        word_len =  numpy.int32(word_len)
+       # dp = numpy.asarray(dp)
+
+        # allocating memory for our variables on the GPU
+        word_gpu = cuda.mem_alloc(self.max_length * 8)
+        #flag_gpu = cuda.mem_alloc(32)
+        length_gpu = cuda.mem_alloc(length.nbytes)
+        distances_gpu = cuda.mem_alloc(len(self.data) * 32)
+        word_len_gpu = cuda.mem_alloc(word_len.nbytes)
+        #dp_gpu = cuda.mem_alloc(((self.max_length//4)**2) * 128)
+
+        # putting the variables into the GPU memory we allocated
+        cuda.memcpy_htod(word_gpu, word)
+        #cuda.memcpy_htod(flag_gpu, flag)
+        cuda.memcpy_htod(length_gpu, length)
+        cuda.memcpy_htod(distances_gpu, distances)
+        cuda.memcpy_htod(word_len_gpu, word_len)
+        #cuda.memcpy_htod(dp_gpu, dp)
+        # calculating the number of blocks we need for our data
+        grid_size = int((self.data.size/1024)**(0.5))
+
+        self.set_to_levenshtein()
+        self.func = self.mod.get_function("kernel")
+        # calling our kernel
+        self.func(self.data_gpu, word_gpu, length_gpu, distances_gpu, word_len_gpu, grid = (grid_size + 1, grid_size + 1, 1), block=(32, 32,1))
+        #self.func(self.data_gpu, word_gpu, length_gpu, distances_gpu, word_len_gpu, grid = (1, 1, 1), block=(1, 1 ,1))
+        # cleaning the variables from our GPU, since we didn't clean up the
+        # database data, it is still stored on the GPU, ready for a new search
+        word_changed = numpy.empty_like(word)
+        #flag_changed = numpy.empty_like(flag)
+        length_changed = numpy.empty_like(length)
+        distances_changed = numpy.empty_like(distances)
+        word_len_changed = numpy.empty_like(word_len)
+        #dp_changed = numpy.empty_like(dp)
+
+        cuda.memcpy_dtoh(word_changed, word_gpu)
+        #cuda.memcpy_dtoh(flag_changed, flag_gpu)
+        cuda.memcpy_dtoh(length_changed, length_gpu)
+        cuda.memcpy_dtoh(distances_changed, distances_gpu)
+        cuda.memcpy_dtoh(word_len_changed, word_gpu)
+        #cuda.memcpy_dtoh(dp_changed, dp_gpu)
+
+        return distances_changed # return if the flag has been changed to 1
+        
 
     def is_malicious_naive_gpu(self, word):
             # initializing our variables
