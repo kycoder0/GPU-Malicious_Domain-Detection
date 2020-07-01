@@ -9,6 +9,8 @@ from colorama import init
 init()
 from colorama import Fore, Back, Style
 import pandas as pd
+# import pycuda
+# import pycuda.autoinit
 # print(Fore.RED + 'some red text')
 # print(Back.GREEN + 'and with a green background')
 # print(Style.DIM + 'and in dim text')
@@ -22,8 +24,10 @@ import CUDA.matcher
 # import time
 # import CUDA.info as info
 # import RDG.generator as gen
+from subprocess import call
 
 
+import matcherTest as match
 def check_libraries():
     print(Fore.CYAN + 'Checking if the necessary libraries are installed...')
     libraries_not_found = []
@@ -120,24 +124,29 @@ def create_matcher():
 def select_matching_algorithm(matcher):
     print(Fore.YELLOW + '''
         1. Naive
-        2. KMP
-        3. 
+        2. Levenshtein Distance
+        3. Hamming Distance
     ''')
     selection = input('Select Algorithm: ')
     while selection not in ['1', '2', '3']:
         selection = input(Fore.RED + 'Invalid selection. ' + Fore.YELLOW + 'Please try again: ')
     
-    matcher.set_algorithm({'1': 'Naive', '2': 'KMP', '3': ' '}.get(selection))
-    return {'1': 'Naive', '2': 'KMP', '3': ' '}.get(selection)
+    #matcher.set_algorithm({'1': 'Naive', '2': 'KMP', '3': ' '}.get(selection))
+    return {'1': 'Naive', '2': 'Levenshtein', '3': 'Hamming'}.get(selection)
 
 def simple_search( matcher):
     sample_domain = input(Fore.YELLOW + 'Enter a domain to be checked: ')
     result = matcher.is_malicious(sample_domain, 'GPU')
     if (result == 1):
             print(Fore.YELLOW + f'"{sample_domain}" is malicious')
-    else:
+    elif result == 0:
         print(Fore.YELLOW + f'"{sample_domain}" is benign')
+    else:
+        print(Fore.YELLOW + f'Closest match: "{result}"')
     print()
+    #pycuda.current_context().trashing.clear()
+    del matcher
+    matcher = create_matcher()
 
 def display_menu(matcher):
     print(Fore.YELLOW + '''
@@ -156,6 +165,7 @@ def complete_menu_select(selection, matcher):
     if selection == '1':
         #algorithm_number = select_matching_algorithm()
         selected_algorithm = select_matching_algorithm(matcher)
+        matcher.algorithm = selected_algorithm
     elif selection == '2':
         simple_search(matcher)
     elif selection == '3':
@@ -193,14 +203,16 @@ def main():
         sys.exit(1)
     print()
 
-    create_local_data(db)
+    #create_local_data(db)
     
-    matcher = create_matcher()
-    matcher.load_gpu()
+    #matcher = create_matcher()
+    #matcher.load_gpu()
 
- 
-    while (True):
-        display_menu(matcher)
+    i = 0
+    while (i < 3):
+        i = i + 1
+        #display_menu(matcher)
+        call(["python3", "matcherTest.py"])
 
 if __name__ == "__main__":
     main()
