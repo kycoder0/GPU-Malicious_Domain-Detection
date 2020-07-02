@@ -52,8 +52,9 @@ class Connection:
         """
         tables = self.cursor.execute('show tables like \'' + tablename + '\'')
         if (self.cursor.fetchone()): # if table exists
-            sql = "insert ignore into " + tablename + " " + "(" + labels + ")" + " values " + "(%s, %s, %s)"
-            self.cursor.executemany(sql, values)
+            sql = "insert ignore into " + tablename + " " + "(" + labels + ")" + " values " + f"('{values[0]}', '{values[1]}', '{values[2]}')"
+            print(sql)
+            self.cursor.execute(sql)
             self.database.commit()
         else:
             print('Table ' + tablename + ' does not exist')
