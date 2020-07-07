@@ -11,29 +11,105 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 import os
 import pandas as pd
 from threading import Thread
-
+import RDG.generator as gen
 
 class Ui_MainWindow(object):
+    path_column_num_dic = dict()
+    current_md_dataset = ""
+    current_page = 0
+    def getDomainColumn(self, widget):
+        i, okPressed = QtWidgets.QInputDialog.getInt(widget, "Enter the domain column","Column #:", 0, 0, 200, 1)
+        if okPressed:
+            return i
+        return False
 
-    def insertDataToDomainTable(self, data):
-        for i in range(len(data)):
-            self.domainTable.insertRow(i)
-            for j in range(3):
-                self.domainTable.setItem(i, j, QtWidgets.QTableWidgetItem(str(data[j][i])))
+    def generateRandomDataClicked(self):
+        rdg = gen.Generator()
+        rdg.generate(1000)
+    def maliciousDatasetComboBoxChanged(self, value):
+        self.dataLoadCounter = 0
+        while self.domainTable.rowCount() > 0:
+            self.domainTable.removeRow(0)
+        self.current_md_dataset = value
+        self.updateTableView(value)
+    def insertDataToDomainTable(self, data, path):
+
+        print('hello there')
+        
+        high = self.dataLoadCounter + 1000
+        print(len(data))
+        print(self.dataLoadCounter)
+        print(min(self.dataLoadCounter, len(data)))
+        upper = min(high, len(data))
+
+        for i in range(self.dataLoadCounter, upper, 1):
+            #print('what')
+            self.domainTable.insertRow(i-self.dataLoadCounter)
+            print(data[self.path_column_num_dic[path]][i])
+            self.domainTable.setItem(i-self.dataLoadCounter, 0, QtWidgets.QTableWidgetItem(str(data[self.path_column_num_dic[path]][i])))
+
+
     def updateTableView(self, dataFilePath):
         if os.path.exists(dataFilePath):
             data = pd.read_csv(dataFilePath, encoding = "ISO-8859-1", sep = ',', dtype='unicode', header = None)
-            print(data[0], data[1])
-            thread = Thread(target = self.insertDataToDomainTable, args = (data, ))
+            #self.getDomainColumn(self.centralwidget)
+            thread = Thread(target = self.insertDataToDomainTable, args = (data, dataFilePath))
             thread.start()
+            
             
     def addNewDatasetClick(self):
         file = QtWidgets.QFileDialog.getOpenFileName(self.centralwidget, "Choose Data", "", "csv(*.csv)")
-        self.maliciousDatasetComboBox.addItem(file[0])
         if '.csv' in file[1]:
-            self.updateTableView(file[0])
+            if os.path.exists(file[0]):
+                col = self.getDomainColumn(self.centralwidget)
+                while not isinstance(col, int):
+                    col = self.getDomainColumn(self.centralwidget)
+                self.path_column_num_dic[file[0]] = col
+                self.maliciousDatasetComboBox.addItem(file[0])
+                self.pageNumberLineEdit.setText('0')
+            #self.getInteger()
+                #self.updateTableView(file[0])
         print(file)
+    
+    def nextPageClicked(self):
+        while self.domainTable.rowCount() > 0:
+            self.domainTable.removeRow(0)
+        self.pageNumberLineEdit.setText(str(self.current_page + 1))
+        self.current_page = self.current_page + 1
+        self.dataLoadCounter = self.dataLoadCounter + 1000
+        self.updateTableView(self.current_md_dataset)
+    def previousPageClicked(self):
+        
+        if self.dataLoadCounter >= 1000:
+            while self.domainTable.rowCount() > 0:
+                self.domainTable.removeRow(0)
+            self.dataLoadCounter = self.dataLoadCounter - 1000
+            self.updateTableView(self.current_md_dataset)
+            self.pageNumberLineEdit.setText(str(self.current_page - 1))
+            self.current_page = self.current_page - 1
+    def goToPageClicked(self):
+        try:
+            val = self.pageNumberLineEdit.text()
+            val = int(val)
+            self.current_page = val - 1
+            self.dataLoadCounter = (val - 1) * 1000
+            self.nextPageClicked()
+        except ValueError:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Critical)
+            msg.setText("Error")
+            msg.setInformativeText('Error parsing page number')
+            msg.setWindowTitle("Error")
+            msg.exec_()
+    def setupButtons(self):
+        self.addNewDatasetButton.clicked.connect(self.addNewDatasetClick)
+        self.maliciousDatasetComboBox.currentTextChanged.connect(self.maliciousDatasetComboBoxChanged)
+        self.generateRandomDatasetButton.clicked.connect(self.generateRandomDataClicked)
+        self.nextPageButton.clicked.connect(self.nextPageClicked)
+        self.previousPageButton.clicked.connect(self.previousPageClicked)
+        self.goToPageButton.clicked.connect(self.goToPageClicked)
     def setupUi(self, MainWindow):
+        self.dataLoadCounter = 0
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1103, 918)
         palette = QtGui.QPalette()
@@ -342,7 +418,7 @@ class Ui_MainWindow(object):
 "    background-color: red;\n"
 "}\n"
 "\n"
-"QTabWidget::pane { border: 0; }")
+"QTabWidget::pane { border: 0; } QLabel { color:white;} \n QSpinBox {color:white;}")
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout = QtWidgets.QGridLayout(self.centralwidget)
         self.gridLayout.setObjectName("gridLayout")
@@ -380,7 +456,7 @@ class Ui_MainWindow(object):
 "  font-size: 12px;\n"
 "  margin: 4px 2px;\n"
 "border-radius: 12px;\n"
-"}")
+"} \n")
         self.dataTab.setObjectName("dataTab")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.dataTab)
         self.gridLayout_2.setObjectName("gridLayout_2")
@@ -437,92 +513,10 @@ class Ui_MainWindow(object):
         self.domainTable.setShowGrid(True)
         self.domainTable.setCornerButtonEnabled(False)
         self.domainTable.setObjectName("domainTable")
-        self.domainTable.setColumnCount(3)
-        self.domainTable.setRowCount(37)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(0, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(1, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(2, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(3, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(4, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(5, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(6, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(7, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(8, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(9, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(10, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(11, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(12, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(13, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(14, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(15, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(16, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(17, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(18, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(19, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(20, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(21, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(22, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(23, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(24, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(25, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(26, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(27, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(28, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(29, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(30, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(31, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(32, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(33, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(34, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(35, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setVerticalHeaderItem(36, item)
+        self.domainTable.setColumnCount(1)
+
         item = QtWidgets.QTableWidgetItem()
         self.domainTable.setHorizontalHeaderItem(0, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setHorizontalHeaderItem(1, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setHorizontalHeaderItem(2, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setItem(0, 1, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.domainTable.setItem(0, 2, item)
 
         self.domainTable.horizontalHeader().setCascadingSectionResizes(True)
         self.domainTable.horizontalHeader().setDefaultSectionSize(400)
@@ -628,6 +622,108 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addWidget(self.AppendDataButton)
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.dataTabMainLayoutV1.addItem(spacerItem2)
+        self.nextPageButton = QtWidgets.QPushButton(self.dataTab)
+        self.nextPageButton.setStyleSheet("QPushButton{\n"
+"    background-color: #bb86fc;\n"
+"border: none;\n"
+"  color: white;\n"
+"  padding:10px;\n"
+"  text-align: center;\n"
+"  text-decoration: none;\n"
+"  display: inline-block;\n"
+"  font-size: 12px;\n"
+"  margin: 4px 2px;\n"
+"border-radius: 12px;\n"
+"transition-duration: 0.8s;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"    background-color: #525252;\n"
+"    color: white;\n"
+"}\n"
+"\n"
+"")
+        self.nextPageButton.setObjectName("nextPageButton")
+        self.dataTabMainLayoutV1.addWidget(self.nextPageButton)
+        self.previousPageButton = QtWidgets.QPushButton(self.dataTab)
+        self.previousPageButton.setStyleSheet("QPushButton{\n"
+"    background-color: #bb86fc;\n"
+"border: none;\n"
+"  color: white;\n"
+"  padding:10px;\n"
+"  text-align: center;\n"
+"  text-decoration: none;\n"
+"  display: inline-block;\n"
+"  font-size: 12px;\n"
+"  margin: 4px 2px;\n"
+"border-radius: 12px;\n"
+"transition-duration: 0.8s;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"    background-color: #525252;\n"
+"    color: white;\n"
+"}\n"
+"\n"
+"")
+        self.previousPageButton.setObjectName("previousPageButton")
+        self.dataTabMainLayoutV1.addWidget(self.previousPageButton)
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem3)
+        self.label_7 = QtWidgets.QLabel(self.dataTab)
+        self.label_7.setStyleSheet("color: white;")
+        self.label_7.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.label_7.setObjectName("label_7")
+        self.horizontalLayout_2.addWidget(self.label_7)
+        self.pageNumberLineEdit = QtWidgets.QLineEdit(self.dataTab)
+        self.pageNumberLineEdit.setText('0')
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pageNumberLineEdit.sizePolicy().hasHeightForWidth())
+        self.pageNumberLineEdit.setSizePolicy(sizePolicy)
+        self.pageNumberLineEdit.setStyleSheet("background-color: #bb86fc;\n"
+"color: white;\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"")
+        self.pageNumberLineEdit.setObjectName("pageNumberLineEdit")
+        self.horizontalLayout_2.addWidget(self.pageNumberLineEdit)
+        spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem4)
+        self.dataTabMainLayoutV1.addLayout(self.horizontalLayout_2)
+        self.goToPageButton = QtWidgets.QPushButton(self.dataTab)
+        self.goToPageButton.setStyleSheet("QPushButton{\n"
+"    background-color: #bb86fc;\n"
+"border: none;\n"
+"  color: white;\n"
+"  padding:10px;\n"
+"  text-align: center;\n"
+"  text-decoration: none;\n"
+"  display: inline-block;\n"
+"  font-size: 12px;\n"
+"  margin: 4px 2px;\n"
+"border-radius: 12px;\n"
+"transition-duration: 0.8s;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"    background-color: #525252;\n"
+"    color: white;\n"
+"}\n"
+"\n"
+"")
+        self.goToPageButton.setObjectName("goToPageButton")
+        self.dataTabMainLayoutV1.addWidget(self.goToPageButton)
+        spacerItem5 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.dataTabMainLayoutV1.addItem(spacerItem5)
         self.addButton = QtWidgets.QPushButton(self.dataTab)
         self.addButton.setStyleSheet("QPushButton{\n"
 "    background-color: #bb86fc;\n"
@@ -724,21 +820,21 @@ class Ui_MainWindow(object):
         self.datasetComboBox.setStyleSheet("background-color: #bb86fc;")
         self.datasetComboBox.setObjectName("datasetComboBox")
         self.verticalLayout_4.addWidget(self.datasetComboBox)
-        spacerItem3 = QtWidgets.QSpacerItem(20, 80, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
-        self.verticalLayout_4.addItem(spacerItem3)
+        spacerItem6 = QtWidgets.QSpacerItem(20, 80, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        self.verticalLayout_4.addItem(spacerItem6)
         self.verticalLayout.addLayout(self.verticalLayout_4)
         self.verticalLayout_5 = QtWidgets.QVBoxLayout()
         self.verticalLayout_5.setObjectName("verticalLayout_5")
         self.verticalLayout.addLayout(self.verticalLayout_5)
-        spacerItem4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout.addItem(spacerItem4)
-        spacerItem5 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.verticalLayout.addItem(spacerItem5)
+        spacerItem7 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout.addItem(spacerItem7)
+        spacerItem8 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.verticalLayout.addItem(spacerItem8)
         self.horizontalLayout.addLayout(self.verticalLayout)
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
         self.verticalLayout_3.setObjectName("verticalLayout_3")
-        spacerItem6 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_3.addItem(spacerItem6)
+        spacerItem9 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_3.addItem(spacerItem9)
         self.startButton = QtWidgets.QPushButton(self.detectionTab)
         self.startButton.setStyleSheet("QPushButton{\n"
 "    background-color: #bb86fc;\n"
@@ -808,8 +904,8 @@ class Ui_MainWindow(object):
         self.duplicatesCheckbox.setStyleSheet("color:#bb86fc;")
         self.duplicatesCheckbox.setObjectName("duplicatesCheckbox")
         self.verticalLayout_3.addWidget(self.duplicatesCheckbox)
-        spacerItem7 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_3.addItem(spacerItem7)
+        spacerItem10 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_3.addItem(spacerItem10)
         self.label_5 = QtWidgets.QLabel(self.detectionTab)
         font = QtGui.QFont()
         font.setPointSize(12)
@@ -822,8 +918,8 @@ class Ui_MainWindow(object):
 "")
         self.algorithmComboBox.setObjectName("algorithmComboBox")
         self.verticalLayout_3.addWidget(self.algorithmComboBox)
-        spacerItem8 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_3.addItem(spacerItem8)
+        spacerItem11 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_3.addItem(spacerItem11)
         self.speedTestButton = QtWidgets.QPushButton(self.detectionTab)
         self.speedTestButton.setStyleSheet("QPushButton{\n"
 "    background-color: #bb86fc;\n"
@@ -913,8 +1009,8 @@ class Ui_MainWindow(object):
 "")
         self.algorithmMemoryComparisonButton.setObjectName("algorithmMemoryComparisonButton")
         self.verticalLayout_3.addWidget(self.algorithmMemoryComparisonButton)
-        spacerItem9 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_3.addItem(spacerItem9)
+        spacerItem12 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_3.addItem(spacerItem12)
         self.generateRandomDatasetButton_2 = QtWidgets.QPushButton(self.detectionTab)
         self.generateRandomDatasetButton_2.setStyleSheet("QPushButton{\n"
 "    background-color: #bb86fc;\n"
@@ -967,31 +1063,20 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(1)
-
-        # hook up clicks
-        self.addNewDatasetButton.clicked.connect(self.addNewDatasetClick)
+        self.tabWidget.setCurrentIndex(0)
+        self.setupButtons()
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
         self.label_2.setText(_translate("MainWindow", "Select a dataset to view, or to load onto the GPU. (Known malicious or test set)"))
-        self.maliciousDatasetComboBox.setItemText(0, _translate("MainWindow", "New Item"))
-        self.maliciousDatasetComboBox.setItemText(1, _translate("MainWindow", "New Item"))
-        self.maliciousDatasetComboBox.setItemText(2, _translate("MainWindow", "New Item"))
-        self.maliciousDatasetComboBox.setItemText(3, _translate("MainWindow", "New Item"))
         self.label.setText(_translate("MainWindow", "Search Dataset"))
         self.searchBar.setToolTip(_translate("MainWindow", "(Enter search term here)"))
         self.searchBar.setPlaceholderText(_translate("MainWindow", "Enter search term"))
         self.domainTable.setSortingEnabled(True)
-  
         item = self.domainTable.horizontalHeaderItem(0)
-        item.setText(_translate("MainWindow", "Static IP"))
-        item = self.domainTable.horizontalHeaderItem(1)
         item.setText(_translate("MainWindow", "Domain"))
-        item = self.domainTable.horizontalHeaderItem(2)
-        item.setText(_translate("MainWindow", "Timestamp"))
         __sortingEnabled = self.domainTable.isSortingEnabled()
         self.domainTable.setSortingEnabled(True)
         self.domainTable.setSortingEnabled(__sortingEnabled)
@@ -999,6 +1084,12 @@ class Ui_MainWindow(object):
         self.loadDataButton.setText(_translate("MainWindow", "Load Data Onto GPU"))
         self.generateRandomDatasetButton.setText(_translate("MainWindow", "Generate Random Dataset"))
         self.AppendDataButton.setText(_translate("MainWindow", "Append Data to Dataset"))
+        self.nextPageButton.setText(_translate("MainWindow", "Next Page"))
+        self.previousPageButton.setWhatsThis(_translate("MainWindow", "<html><head/><body><p>QPushButton{</p><p>    background-color: #bb86fc;</p><p>border: none;</p><p>  color: white;</p><p>  padding:10px;</p><p>  text-align: center;</p><p>  text-decoration: none;</p><p>  display: inline-block;</p><p>  font-size: 12px;</p><p>  margin: 4px 2px;</p><p>border-radius: 12px;</p><p>transition-duration: 0.8s;</p><p>}</p><p><br/></p><p>QPushButton:hover {</p><p>    background-color: #525252;</p><p>    color: white;</p><p>}</p><p><br/></p><p><br/></p></body></html>"))
+        self.previousPageButton.setText(_translate("MainWindow", "Previous Page"))
+        self.label_7.setText(_translate("MainWindow", "Page:"))
+        self.pageNumberLineEdit.setWhatsThis(_translate("MainWindow", "<html><head/><body><p><br/></p></body></html>"))
+        self.goToPageButton.setText(_translate("MainWindow", "Go To Page"))
         self.addButton.setText(_translate("MainWindow", "Add Entry"))
         self.deleteEntryButton.setText(_translate("MainWindow", "Delete Entry"))
         self.undoButton.setText(_translate("MainWindow", "Undo"))

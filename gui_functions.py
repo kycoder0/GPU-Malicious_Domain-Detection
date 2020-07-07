@@ -195,8 +195,7 @@ def get_column_number(max):
         return get_column_number(max)
 
 
-def addNewDatasetClick():
-    file = QtWidgets.QFileDialog.getOpenFileName("Choose Data", "", "csv(*.csv)")
+
 def main():
     print(Fore.YELLOW + 'Starting setup...\n')
     db = check_db_connection()

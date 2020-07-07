@@ -3,13 +3,14 @@ import random
 import pandas
 import os
 directoryPath = os.path.dirname(os.path.realpath(__file__))
-directoryPath = directoryPath[ :directoryPath.rfind('/')]
-directoryPath = directoryPath[ :directoryPath.rfind('/')] + '/Data/random.csv'
+print(directoryPath)
+
+directoryPath = directoryPath[ :directoryPath.rfind('\\')] + '\\random.csv'
 if os.path.exists(directoryPath):
     os.remove(directoryPath)
 class Generator:
-    @staticmethod
-    def generate(num_domains):
+
+    def generate(self, num_domains):
         level_one_domains = ['.com', '.net', '.io', '.blog', '.dev', '.eco', '.info']
 
         domains = list()
@@ -18,3 +19,4 @@ class Generator:
             domains.append(domain)
         df = pandas.DataFrame(data={"domain": domains})
         df.to_csv(directoryPath, index=False)
+        print(directoryPath)

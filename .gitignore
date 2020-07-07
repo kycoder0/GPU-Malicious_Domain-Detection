@@ -2,3 +2,4 @@
 *.pyo
 /*.csv
 localdata.csv
+/*.xlsx
