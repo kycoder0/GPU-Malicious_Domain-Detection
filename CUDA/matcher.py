@@ -34,11 +34,11 @@ class Matcher:
         print(len(self.data))
         self.set_to_naive()
         self.algorithm = 'Naive'
-
+        self.is_loaded = False
     def unload_gpu(self):
         data_changed = numpy.empty_like(self.data)
         cuda.memcpy_dtoh(data_changed, self.data_gpu)
-
+        self.is_loaded = False
 
     def set_to_kmp(self):
         self.algorithm = 'KMP'
@@ -82,7 +82,7 @@ class Matcher:
         self.max_length = len(max(self.data, key=len)) * 4
         
         self.func = self.mod.get_function("kernel")
-
+        self.is_loaded = True
     def set_to_hamming(self):
         self.mod = SourceModule("""
             #include <stdio.h>
@@ -129,7 +129,7 @@ class Matcher:
             //printf("%d\\n", distances[distances_idx]);
             //distances[distances_idx] = 0;
 
-            int dp [250][250];
+            int dp [300][300];
            // int len = length[0];
            int len = length[0]/4;
            //printf("%d %d", len, word_len[0]);
@@ -419,7 +419,9 @@ class Matcher:
                     times.append(end-start)
             print(malicious_domains)
             print(times)
-    
+            for i in range(1, len(times)):
+                times[i] = times[i] + times[i-1]
+        return malicious_domains, times
 
     def time_diff(self, num_samples):
         """
@@ -496,7 +498,7 @@ class Matcher:
 
 
 def main():
-    domains = ['haha.com', 'pog.com', 'pog-champion.com']
+    domains = ['109-204-26-16.netconnexion.managedb', '109-204fdsafa-26-16.netconnexion.managedb', '109-204-26-16.netconeafewnexion.managedbfdwsf']
 
     matcher = Matcher('C:\\Users\\trevo\\Documents\\malicious-domain-detection\\localdata.csv')
 

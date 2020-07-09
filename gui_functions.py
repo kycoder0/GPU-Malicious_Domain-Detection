@@ -196,22 +196,12 @@ def get_column_number(max):
 
 
 
-def main():
-    print(Fore.YELLOW + 'Starting setup...\n')
-    db = check_db_connection()
-    reqs = check_libraries()
-    if not (db and reqs):
-        sys.exit(1)
-    print()
-
-    #create_local_data(db)
+# def main():
+#     print(Fore.YELLOW + 'Starting setup...\n')
+#     reqs = check_libraries()
+#     db = check_db_connection()
     
-    #matcher = create_matcher()
-    #matcher.load_gpu()
-
-    i = 0
-    while (i < 3):
-        i = i + 1
-        #display_menu(matcher)
-        call(["python3", "matcherTest.py"])
+#     if not (db and reqs):
+#         sys.exit(1)
+#     print()
 

@@ -14,8 +14,10 @@ from threading import Thread
 import RDG.generator as gen
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-
-
+import pathlib
+dir_path = pathlib.Path(__file__).parent.absolute()
+import CUDA.matcher as matcher
+import gui_functions as gf
 class MplCanvas(FigureCanvasQTAgg):
 
     def __init__(self, parent=None, width=500, height=400, dpi=100):
@@ -27,6 +29,15 @@ class Ui_MainWindow(object):
     path_column_num_dic = dict()
     current_md_dataset = ""
     current_page = 0
+    matcher = None
+    def setupMatcher(self):
+        db = gf.check_db_connection()
+        gf.create_local_data(db)
+        path = str(self.maliciousDatasetComboBox.currentText())
+        #data_path = str(dir_path) + '\\localdata.csv'
+        if os.path.exists(path):
+            self.matcher = matcher.Matcher(path)
+            self.matcher.load_gpu()
     def getDomainColumn(self, widget):
         i, okPressed = QtWidgets.QInputDialog.getInt(widget, "Enter the domain column","Column #:", 0, 0, 200, 1)
         if okPressed:
@@ -111,6 +122,45 @@ class Ui_MainWindow(object):
             msg.setInformativeText('Error parsing page number')
             msg.setWindowTitle("Error")
             msg.exec_()
+    def addDatasetClick(self):
+        file = QtWidgets.QFileDialog.getOpenFileName(self.centralwidget, "Choose Data", "", "csv(*.csv)")
+        if '.csv' in file[1]:
+            if os.path.exists(file[0]):
+                col = self.getDomainColumn(self.centralwidget)
+                while not isinstance(col, int):
+                    col = self.getDomainColumn(self.centralwidget)
+                self.path_column_num_dic[file[0]] = col
+                self.datasetComboBox.addItem(file[0])
+    def startProcessClicked(self):
+        data_path = self.datasetComboBox.currentText()
+        print('why')
+        if os.path.exists(data_path):
+            domains = pd.read_csv(data_path, encoding = "ISO-8859-1", sep = ',', dtype='unicode', header = None)
+            domain_list_pd = domains[self.path_column_num_dic[data_path]]
+            domain_list = []
+
+            for domain in domain_list_pd:
+                domain_list.append(domain)
+            if self.matcher is not None:
+                print('why again')
+                
+                currentAlgorithm = self.algorithmComboBox.currentText()
+                alg = ''
+                if 'Levenshtein' in currentAlgorithm:
+                    alg = 'Levenshtein'
+                elif 'Hamming' in currentAlgorithm:
+                    alg = 'Hamming'
+                else:
+                    alg = 'Naive'
+                domains, times = self.matcher.is_malicious(domain_list, 'GPU', alg)
+                self.sc.setParent(None)
+                self.sc = MplCanvas(self, width=5, height=900, dpi=70)
+                self.sc.axes.plot([(i+1) for i in range(len(times))], times)
+                self.sc.axes.set_xlabel('# of Domains')
+                self.sc.axes.set_ylabel('Time (seconds)')
+                self.sc.axes.set_title(f'Time vs # of Domains using {alg} algorithm on GPU')
+                self.verticalLayout.addWidget(self.sc)
+        print('howeaihwe')
     def setupButtons(self):
         self.addNewDatasetButton.clicked.connect(self.addNewDatasetClick)
         self.maliciousDatasetComboBox.currentTextChanged.connect(self.maliciousDatasetComboBoxChanged)
@@ -118,6 +168,9 @@ class Ui_MainWindow(object):
         self.nextPageButton.clicked.connect(self.nextPageClicked)
         self.previousPageButton.clicked.connect(self.previousPageClicked)
         self.goToPageButton.clicked.connect(self.goToPageClicked)
+        self.loadDataButton.clicked.connect(self.setupMatcher)
+        self.startButton.clicked.connect(self.startProcessClicked)
+        self.addDatasetButton.clicked.connect(self.addDatasetClick)
     def setupUi(self, MainWindow):
         self.dataLoadCounter = 0
         MainWindow.setObjectName("MainWindow")
@@ -830,8 +883,33 @@ class Ui_MainWindow(object):
         self.datasetComboBox.setStyleSheet("background-color: #bb86fc;")
         self.datasetComboBox.setObjectName("datasetComboBox")
         self.verticalLayout_4.addWidget(self.datasetComboBox)
+
+        self.addDatasetButton = QtWidgets.QPushButton(self.detectionTab)
+        self.addDatasetButton.setStyleSheet("QPushButton{\n"
+"    background-color: #bb86fc;\n"
+"border: none;\n"
+"  color: white;\n"
+"  padding:10px;\n"
+"  text-align: center;\n"
+"  text-decoration: none;\n"
+"  display: inline-block;\n"
+"  font-size: 12px;\n"
+"  margin: 4px 2px;\n"
+"border-radius: 12px;\n"
+"transition-duration: 0.8s;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"    background-color: #525252;\n"
+"    color: white;\n"
+"}\n"
+"\n"
+"")
+        self.addDatasetButton.setObjectName("addDatasetButton")
+        self.verticalLayout_4.addWidget(self.addDatasetButton)
+
         spacerItem6 = QtWidgets.QSpacerItem(20, 80, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
-        self.verticalLayout_4.addItem(spacerItem6)
+       # self.verticalLayout_4.addItem(spacerItem6)
         self.verticalLayout.addLayout(self.verticalLayout_4)
         self.verticalLayout_5 = QtWidgets.QVBoxLayout()
         self.verticalLayout_5.setObjectName("verticalLayout_5")
@@ -840,9 +918,9 @@ class Ui_MainWindow(object):
         self.verticalLayout.addItem(spacerItem7)
         spacerItem8 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         #self.verticalLayout.addItem(spacerItem8)
-        sc = MplCanvas(self, width=5, height=900, dpi=70)
-        sc.axes.plot([0,1,2,3,4], [10,1,20,3,40])
-        self.verticalLayout.addWidget(sc)
+        self.sc = MplCanvas(self, width=5, height=900, dpi=70)
+        
+        self.verticalLayout.addWidget(self.sc)
         self.horizontalLayout.addLayout(self.verticalLayout)
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
         self.verticalLayout_3.setObjectName("verticalLayout_3")
@@ -928,7 +1006,10 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.addWidget(self.label_5)
         self.algorithmComboBox = QtWidgets.QComboBox(self.detectionTab)
         self.algorithmComboBox.setStyleSheet("background-color:#bb86fc;\n"
-"")
+"")     
+        self.algorithmComboBox.addItem("Naive (Exact Match)")
+        self.algorithmComboBox.addItem("Levenshtein (Closest Match)")
+        self.algorithmComboBox.addItem("Hamming (Closest Match)")
         self.algorithmComboBox.setObjectName("algorithmComboBox")
         self.verticalLayout_3.addWidget(self.algorithmComboBox)
         spacerItem11 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
@@ -1120,7 +1201,7 @@ class Ui_MainWindow(object):
         self.generateRandomDatasetButton_2.setText(_translate("MainWindow", "Generate Random Dataset"))
         self.label_6.setText(_translate("MainWindow", "Sample Size:"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.detectionTab), _translate("MainWindow", "Detection"))
-
+        self.addDatasetButton.setText(_translate("MainWindow", "Add Dataset"))
 
 if __name__ == "__main__":
     import sys
