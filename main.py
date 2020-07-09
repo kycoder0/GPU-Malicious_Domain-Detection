@@ -12,6 +12,16 @@ import os
 import pandas as pd
 from threading import Thread
 import RDG.generator as gen
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
+
+
+class MplCanvas(FigureCanvasQTAgg):
+
+    def __init__(self, parent=None, width=500, height=400, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = fig.add_subplot(111)
+        super(MplCanvas, self).__init__(fig)
 
 class Ui_MainWindow(object):
     path_column_num_dic = dict()
@@ -829,7 +839,10 @@ class Ui_MainWindow(object):
         spacerItem7 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem7)
         spacerItem8 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.verticalLayout.addItem(spacerItem8)
+        #self.verticalLayout.addItem(spacerItem8)
+        sc = MplCanvas(self, width=5, height=900, dpi=70)
+        sc.axes.plot([0,1,2,3,4], [10,1,20,3,40])
+        self.verticalLayout.addWidget(sc)
         self.horizontalLayout.addLayout(self.verticalLayout)
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
         self.verticalLayout_3.setObjectName("verticalLayout_3")

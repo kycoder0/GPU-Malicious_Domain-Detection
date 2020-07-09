@@ -386,7 +386,7 @@ class Matcher:
             return self.is_malicious_kmp_gpu(word)
         else:
             return self.is_malicious_kmp_cpu(word)
-    def is_malicious(self, word, hardware):
+    def is_malicious(self, domains, hardware, algorithm):
         """
         This function sets up our temporary variables and calls our kernel that
         resides on our GPU threads to check if our domain is malicious or not
@@ -394,13 +394,31 @@ class Matcher:
             word: the domain to be searched for
         """
 
-        if self.algorithm == 'Levenshtein':
-            return self.get_levenshtein_distance(word)
-        elif self.algorithm == 'Hamming':
-            return self.get_hamming_distance(word)
-        else:
-            return self.is_malicious_naive_gpu(word)
+        malicious_domains = list()
+        times = list()
 
+        if hardware == 'GPU':
+            if algorithm == 'Levenshtein':
+                for domain in domains:
+                    start = time.time()
+                    malicious_domains.append(self.get_levenshtein_distance(domain))
+                    cuda.Context.set_limit(cuda.limit.STACK_SIZE, 0)
+                    end = time.time()
+                    times.append(end-start)
+            elif algorithm == 'Hamming':
+                for domain in domains:
+                    start = time.time()
+                    malicious_domains.append(self.get_hamming_distance(domain))
+                    end = time.time()
+                    times.append(end-start)
+            else:
+                for domain in domains:
+                    start = time.time()
+                    malicious_domains.append(self.is_malicious_naive_gpu(domain))
+                    end = time.time()
+                    times.append(end-start)
+            print(malicious_domains)
+            print(times)
     
 
     def time_diff(self, num_samples):
@@ -473,3 +491,17 @@ class Matcher:
         print(process.memory_info().rss)
         #print("end = " + str(end_mem))
 
+
+
+
+
+def main():
+    domains = ['haha.com', 'pog.com', 'pog-champion.com']
+
+    matcher = Matcher('C:\\Users\\trevo\\Documents\\malicious-domain-detection\\localdata.csv')
+
+    matcher.load_gpu()
+
+    matcher.is_malicious(domains, 'GPU', 'Levenshtein')
+if __name__ == '__main__':
+    main()
