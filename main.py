@@ -179,6 +179,36 @@ class Ui_MainWindow(object):
                 self.displayError('You need to load the gpu with data')
         else:
             self.displayError('Please select a valid dataset')
+    def executeCPU(self):
+        data_path = self.datasetComboBox.currentText()
+        if os.path.exists(data_path):
+            domains = pd.read_csv(data_path, encoding = "ISO-8859-1", sep = ',', dtype='unicode', header = None)
+            domain_list = self.createDomainList(domains, data_path)
+            if  isinstance(domain_list, bool):
+                return
+            if self.matcher is not None:
+                currentAlgorithm = self.algorithmComboBox.currentText()
+                alg = ''
+                if 'Levenshtein' in currentAlgorithm:
+                    alg = 'Levenshtein'
+                elif 'Hamming' in currentAlgorithm:
+                    alg = 'Hamming'
+                else:
+                    alg = 'Naive'
+                domains, times = self.matcher.is_malicious(domain_list, 'CPU', alg)
+                self.sc.axes.plot([(i+1) for i in range(len(times))], times)
+                self.sc.axes.set_xlabel('# of Domains')
+                self.sc.axes.set_ylabel('Time (seconds)')
+                self.sc.axes.set_title(f'Time vs # of Domains using {alg} algorithm on GPU and CPU')
+                self.verticalLayout.addWidget(self.sc)
+            else:
+                self.displayError('You need to load the gpu with data')
+        else:
+            self.displayError('Please select a valid dataset')
+    def speedTest(self):
+        self.startProcessClicked()
+        self.executeCPU()
+
     def setupButtons(self):
         self.addNewDatasetButton.clicked.connect(self.addNewDatasetClick)
         self.maliciousDatasetComboBox.currentTextChanged.connect(self.maliciousDatasetComboBoxChanged)
@@ -189,6 +219,7 @@ class Ui_MainWindow(object):
         self.loadDataButton.clicked.connect(self.setupMatcher)
         self.startButton.clicked.connect(self.startProcessClicked)
         self.addDatasetButton.clicked.connect(self.addDatasetClick)
+        self.speedTestButton.clicked.connect(self.speedTest)
     def setupUi(self, MainWindow):
         self.dataLoadCounter = 0
         MainWindow.setObjectName("MainWindow")

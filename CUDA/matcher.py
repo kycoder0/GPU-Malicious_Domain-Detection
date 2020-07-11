@@ -11,7 +11,7 @@ import random
 import os
 #import resource
 import psutil
-
+import numpy as np
 class Matcher:
     def __init__(self, readpath):
         """
@@ -417,12 +417,79 @@ class Matcher:
                     malicious_domains.append(self.is_malicious_naive_gpu(domain))
                     end = time.time()
                     times.append(end-start)
-            print(malicious_domains)
-            print(times)
-            for i in range(1, len(times)):
-                times[i] = times[i] + times[i-1]
+        else:
+            if algorithm == 'Levenshtein':
+                for domain in domains:
+                    start = time.time()
+                    malicious_domains.append(self.get_levenshtein_distance_cpu(domain))
+                    end = time.time()
+                    times.append(end-start)
+            elif algorithm == 'Hamming':
+                for domain in domains:
+                    start = time.time()
+                    malicious_domains.append(self.get_hamming_distance_cpu(domain))
+                    end = time.time()
+                    times.append(end-start)
+            else:
+                for domain in domains:
+                    start = time.time()
+                    malicious_domains.append(self.cpu_run(domain))
+                    end = time.time()
+                    times.append(end-start)
+        for i in range(1, len(times)):
+            times[i] = times[i] + times[i-1]
+        print(malicious_domains)
+        print(times)
         return malicious_domains, times
+    def levenshteinlist(self, dom1, domlist):
+        length = len(domlist)
+        distlist = [] 
+        for i in range(length):
+            distlist.append(self.levenshtein(dom1, domlist[i]))
+        return distlist
+    def levenshtein(self, seq1, seq2):
+        size_x = len(seq1) + 1
+        size_y = len(seq2) + 1
+        matrix = np.zeros((size_x, size_y))
+        for x in range(size_x):
+            matrix[x, 0] = x
+        for y in range(size_y):
+            matrix[0, y] = y
 
+        for x in range(1, size_x):
+            for y in range(1, size_y):
+                if seq1[x - 1] == seq2[y - 1]:
+                    matrix[x, y] = min(
+                        matrix[x - 1, y] + 1,
+                        matrix[x - 1, y - 1],
+                        matrix[x, y - 1] + 1
+                    )
+                else:
+                    matrix[x, y] = min(
+                        matrix[x - 1, y] + 1,
+                        matrix[x - 1, y - 1] + 1,
+                        matrix[x, y - 1] + 1
+                )
+        return matrix[size_x - 1, size_y - 1]
+    def get_levenshtein_distance_cpu(self, domain):
+        distances_changed = self.levenshteinlist(domain, self.data)
+        return self.get_match_levenshtein(distances_changed)
+
+    def get_hamming_distance(self, domain1, domain2):
+        smallest_len = min(len(domain1), len(domain2))
+
+        count = 0
+        for i in range(smallest_len):
+            if domain1[i] != domain2[i]:
+                count = count + 1
+        return count
+    def get_hamming_distance_cpu(self, domain):
+
+        dist_list = []
+        for do in self.data:
+            dist_list.append(self.get_hamming_distance(domain, do))
+        return self.get_match_levenshtein(dist_list)
+        
     def time_diff(self, num_samples):
         """
         Function to compare the average computation times of each algorithm
@@ -468,12 +535,10 @@ class Matcher:
 
 
     def cpu_run(self, samples):
-        domains = samples.values
+        domains = samples
         matched = 0
         for domain in domains:
-            print(domain[0])
-            if (self.is_malicious_cpu(domain[0])):
-                print(domain[0] + ' malicious')
+            if (self.is_malicious_naive_cpu(domain)):
                 matched += 1
         return matched
 
@@ -504,6 +569,6 @@ def main():
 
     matcher.load_gpu()
 
-    matcher.is_malicious(domains, 'GPU', 'Levenshtein')
+    matcher.is_malicious(domains, 'CPU', 'Hamming')
 if __name__ == '__main__':
     main()
