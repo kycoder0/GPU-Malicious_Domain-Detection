@@ -116,12 +116,14 @@ class Ui_MainWindow(object):
             self.dataLoadCounter = (val - 1) * 1000
             self.nextPageClicked()
         except ValueError:
-            msg = QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.Critical)
-            msg.setText("Error")
-            msg.setInformativeText('Error parsing page number')
-            msg.setWindowTitle("Error")
-            msg.exec_()
+           self.displayError('Error parsing page number')
+    def displayError(self, text):
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Critical)
+        msg.setText("Error")
+        msg.setInformativeText(text)
+        msg.setWindowTitle("Error")
+        msg.exec_()
     def addDatasetClick(self):
         file = QtWidgets.QFileDialog.getOpenFileName(self.centralwidget, "Choose Data", "", "csv(*.csv)")
         if '.csv' in file[1]:
@@ -131,19 +133,32 @@ class Ui_MainWindow(object):
                     col = self.getDomainColumn(self.centralwidget)
                 self.path_column_num_dic[file[0]] = col
                 self.datasetComboBox.addItem(file[0])
+    def createDomainList(self, domains, data_path):
+        domain_list_pd = domains[self.path_column_num_dic[data_path]]
+        domain_list = []
+        import random as rng
+
+        samples = 0
+        try:
+            samples = int(self.sampleSizeTextBox.text())
+        except ValueError:
+            self.displayError('Enter a valid number of samples.')
+            return False
+
+        if self.duplicatesCheckbox.isChecked():
+            for i in range(samples):
+                domain_list.append(domain_list_pd[rng.randrange(len(domain_list_pd))])
+        else:
+            return domain_list_pd
+        return domain_list
     def startProcessClicked(self):
         data_path = self.datasetComboBox.currentText()
-        print('why')
         if os.path.exists(data_path):
             domains = pd.read_csv(data_path, encoding = "ISO-8859-1", sep = ',', dtype='unicode', header = None)
-            domain_list_pd = domains[self.path_column_num_dic[data_path]]
-            domain_list = []
-
-            for domain in domain_list_pd:
-                domain_list.append(domain)
+            domain_list = self.createDomainList(domains, data_path)
+            if  isinstance(domain_list, bool):
+                return
             if self.matcher is not None:
-                print('why again')
-                
                 currentAlgorithm = self.algorithmComboBox.currentText()
                 alg = ''
                 if 'Levenshtein' in currentAlgorithm:
@@ -160,7 +175,10 @@ class Ui_MainWindow(object):
                 self.sc.axes.set_ylabel('Time (seconds)')
                 self.sc.axes.set_title(f'Time vs # of Domains using {alg} algorithm on GPU')
                 self.verticalLayout.addWidget(self.sc)
-        print('howeaihwe')
+            else:
+                self.displayError('You need to load the gpu with data')
+        else:
+            self.displayError('Please select a valid dataset')
     def setupButtons(self):
         self.addNewDatasetButton.clicked.connect(self.addNewDatasetClick)
         self.maliciousDatasetComboBox.currentTextChanged.connect(self.maliciousDatasetComboBoxChanged)
@@ -455,7 +473,7 @@ class Ui_MainWindow(object):
 "    background-color:#313131;\n"
 "}\n"
 "QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -494,7 +512,7 @@ class Ui_MainWindow(object):
 "     border: 0;\n"
 " }\n"
 "QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -509,7 +527,7 @@ class Ui_MainWindow(object):
         self.dataTab = QtWidgets.QWidget()
         self.dataTab.setStyleSheet("border: 0;\n"
 "QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -536,14 +554,14 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(12)
         self.label_2.setFont(font)
-        self.label_2.setStyleSheet("color: #bb86fc;")
+        self.label_2.setStyleSheet("color: #e43f5a;")
         self.label_2.setObjectName("label_2")
         self.gridLayout_3.addWidget(self.label_2, 0, 0, 1, 1)
         self.maliciousDatasetComboBox = QtWidgets.QComboBox(self.dataTab)
         font = QtGui.QFont()
         font.setPointSize(12)
         self.maliciousDatasetComboBox.setFont(font)
-        self.maliciousDatasetComboBox.setStyleSheet("background-color: #bb86fc;")
+        self.maliciousDatasetComboBox.setStyleSheet("background-color: #e43f5a;")
         self.maliciousDatasetComboBox.setObjectName("maliciousDatasetComboBox")
         self.gridLayout_3.addWidget(self.maliciousDatasetComboBox, 1, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
@@ -552,7 +570,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(12)
         self.label.setFont(font)
-        self.label.setStyleSheet("color: #bb86fc;\n"
+        self.label.setStyleSheet("color: #e43f5a;\n"
 "font-size: 12;")
         self.label.setObjectName("label")
         self.gridLayout_3.addWidget(self.label, 3, 0, 1, 1)
@@ -561,7 +579,7 @@ class Ui_MainWindow(object):
         font.setPointSize(12)
         self.searchBar.setFont(font)
         self.searchBar.setStatusTip("")
-        self.searchBar.setStyleSheet("background-color: #bb86fc;\n"
+        self.searchBar.setStyleSheet("background-color: #e43f5a;\n"
 "color: white;")
         self.searchBar.setObjectName("searchBar")
         self.gridLayout_3.addWidget(self.searchBar, 4, 0, 1, 1)
@@ -572,7 +590,7 @@ class Ui_MainWindow(object):
         font.setWeight(75)
         self.domainTable.setFont(font)
         self.domainTable.setStatusTip("")
-        self.domainTable.setStyleSheet("background-color: #525252; color: #bb86fc; font-weight: bold;")
+        self.domainTable.setStyleSheet("background-color: #525252; color: #e43f5a; font-weight: bold;")
         self.domainTable.setShowGrid(True)
         self.domainTable.setCornerButtonEnabled(False)
         self.domainTable.setObjectName("domainTable")
@@ -593,7 +611,7 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addItem(spacerItem1)
         self.addNewDatasetButton = QtWidgets.QPushButton(self.dataTab)
         self.addNewDatasetButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -616,7 +634,7 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addWidget(self.addNewDatasetButton)
         self.loadDataButton = QtWidgets.QPushButton(self.dataTab)
         self.loadDataButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -639,7 +657,7 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addWidget(self.loadDataButton)
         self.generateRandomDatasetButton = QtWidgets.QPushButton(self.dataTab)
         self.generateRandomDatasetButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -662,7 +680,7 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addWidget(self.generateRandomDatasetButton)
         self.AppendDataButton = QtWidgets.QPushButton(self.dataTab)
         self.AppendDataButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -687,7 +705,7 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addItem(spacerItem2)
         self.nextPageButton = QtWidgets.QPushButton(self.dataTab)
         self.nextPageButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -710,7 +728,7 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addWidget(self.nextPageButton)
         self.previousPageButton = QtWidgets.QPushButton(self.dataTab)
         self.previousPageButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -747,7 +765,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pageNumberLineEdit.sizePolicy().hasHeightForWidth())
         self.pageNumberLineEdit.setSizePolicy(sizePolicy)
-        self.pageNumberLineEdit.setStyleSheet("background-color: #bb86fc;\n"
+        self.pageNumberLineEdit.setStyleSheet("background-color: #e43f5a;\n"
 "color: white;\n"
 "\n"
 "\n"
@@ -764,7 +782,7 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addLayout(self.horizontalLayout_2)
         self.goToPageButton = QtWidgets.QPushButton(self.dataTab)
         self.goToPageButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -789,7 +807,7 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addItem(spacerItem5)
         self.addButton = QtWidgets.QPushButton(self.dataTab)
         self.addButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -812,7 +830,7 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addWidget(self.addButton)
         self.deleteEntryButton = QtWidgets.QPushButton(self.dataTab)
         self.deleteEntryButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -835,7 +853,7 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addWidget(self.deleteEntryButton)
         self.undoButton = QtWidgets.QPushButton(self.dataTab)
         self.undoButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -876,17 +894,17 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(12)
         self.label_3.setFont(font)
-        self.label_3.setStyleSheet("color: #bb86fc;")
+        self.label_3.setStyleSheet("color: #e43f5a;")
         self.label_3.setObjectName("label_3")
         self.verticalLayout_4.addWidget(self.label_3)
         self.datasetComboBox = QtWidgets.QComboBox(self.detectionTab)
-        self.datasetComboBox.setStyleSheet("background-color: #bb86fc;")
+        self.datasetComboBox.setStyleSheet("background-color: #e43f5a;")
         self.datasetComboBox.setObjectName("datasetComboBox")
         self.verticalLayout_4.addWidget(self.datasetComboBox)
 
         self.addDatasetButton = QtWidgets.QPushButton(self.detectionTab)
         self.addDatasetButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -928,7 +946,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.addItem(spacerItem9)
         self.startButton = QtWidgets.QPushButton(self.detectionTab)
         self.startButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -951,7 +969,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.addWidget(self.startButton)
         self.stopButton = QtWidgets.QPushButton(self.detectionTab)
         self.stopButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -976,7 +994,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(12)
         self.label_4.setFont(font)
-        self.label_4.setStyleSheet("color:#bb86fc;")
+        self.label_4.setStyleSheet("color:#e43f5a;")
         self.label_4.setObjectName("label_4")
         self.verticalLayout_3.addWidget(self.label_4)
         self.sampleSizeTextBox = QtWidgets.QLineEdit(self.detectionTab)
@@ -985,14 +1003,14 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sampleSizeTextBox.sizePolicy().hasHeightForWidth())
         self.sampleSizeTextBox.setSizePolicy(sizePolicy)
-        self.sampleSizeTextBox.setStyleSheet("background-color:#bb86fc")
+        self.sampleSizeTextBox.setStyleSheet("background-color:#e43f5a")
         self.sampleSizeTextBox.setObjectName("sampleSizeTextBox")
         self.verticalLayout_3.addWidget(self.sampleSizeTextBox)
         self.duplicatesCheckbox = QtWidgets.QCheckBox(self.detectionTab)
         font = QtGui.QFont()
         font.setPointSize(12)
         self.duplicatesCheckbox.setFont(font)
-        self.duplicatesCheckbox.setStyleSheet("color:#bb86fc;")
+        self.duplicatesCheckbox.setStyleSheet("color:#e43f5a;")
         self.duplicatesCheckbox.setObjectName("duplicatesCheckbox")
         self.verticalLayout_3.addWidget(self.duplicatesCheckbox)
         spacerItem10 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
@@ -1001,11 +1019,11 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(12)
         self.label_5.setFont(font)
-        self.label_5.setStyleSheet("color:#bb86fc;")
+        self.label_5.setStyleSheet("color:#e43f5a;")
         self.label_5.setObjectName("label_5")
         self.verticalLayout_3.addWidget(self.label_5)
         self.algorithmComboBox = QtWidgets.QComboBox(self.detectionTab)
-        self.algorithmComboBox.setStyleSheet("background-color:#bb86fc;\n"
+        self.algorithmComboBox.setStyleSheet("background-color:#e43f5a;\n"
 "")     
         self.algorithmComboBox.addItem("Naive (Exact Match)")
         self.algorithmComboBox.addItem("Levenshtein (Closest Match)")
@@ -1016,7 +1034,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.addItem(spacerItem11)
         self.speedTestButton = QtWidgets.QPushButton(self.detectionTab)
         self.speedTestButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -1039,7 +1057,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.addWidget(self.speedTestButton)
         self.memoryTestButton = QtWidgets.QPushButton(self.detectionTab)
         self.memoryTestButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -1062,7 +1080,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.addWidget(self.memoryTestButton)
         self.algorithmSpeedTestButton = QtWidgets.QPushButton(self.detectionTab)
         self.algorithmSpeedTestButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -1083,7 +1101,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.addWidget(self.algorithmSpeedTestButton)
         self.algorithmMemoryComparisonButton = QtWidgets.QPushButton(self.detectionTab)
         self.algorithmMemoryComparisonButton.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -1107,7 +1125,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.addItem(spacerItem12)
         self.generateRandomDatasetButton_2 = QtWidgets.QPushButton(self.detectionTab)
         self.generateRandomDatasetButton_2.setStyleSheet("QPushButton{\n"
-"    background-color: #bb86fc;\n"
+"    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
 "  padding:10px;\n"
@@ -1130,7 +1148,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(12)
         self.label_6.setFont(font)
-        self.label_6.setStyleSheet("color:#bb86fc")
+        self.label_6.setStyleSheet("color:#e43f5a")
         self.label_6.setObjectName("label_6")
         self.verticalLayout_3.addWidget(self.label_6)
         self.randomSampleSizeTextBox = QtWidgets.QLineEdit(self.detectionTab)
@@ -1140,7 +1158,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.randomSampleSizeTextBox.sizePolicy().hasHeightForWidth())
         self.randomSampleSizeTextBox.setSizePolicy(sizePolicy)
-        self.randomSampleSizeTextBox.setStyleSheet("background-color:#bb86fc")
+        self.randomSampleSizeTextBox.setStyleSheet("background-color:#e43f5a")
         self.randomSampleSizeTextBox.setObjectName("randomSampleSizeTextBox")
         self.verticalLayout_3.addWidget(self.randomSampleSizeTextBox)
         self.horizontalLayout.addLayout(self.verticalLayout_3)
@@ -1179,7 +1197,7 @@ class Ui_MainWindow(object):
         self.generateRandomDatasetButton.setText(_translate("MainWindow", "Generate Random Dataset"))
         self.AppendDataButton.setText(_translate("MainWindow", "Append Data to Dataset"))
         self.nextPageButton.setText(_translate("MainWindow", "Next Page"))
-        self.previousPageButton.setWhatsThis(_translate("MainWindow", "<html><head/><body><p>QPushButton{</p><p>    background-color: #bb86fc;</p><p>border: none;</p><p>  color: white;</p><p>  padding:10px;</p><p>  text-align: center;</p><p>  text-decoration: none;</p><p>  display: inline-block;</p><p>  font-size: 12px;</p><p>  margin: 4px 2px;</p><p>border-radius: 12px;</p><p>transition-duration: 0.8s;</p><p>}</p><p><br/></p><p>QPushButton:hover {</p><p>    background-color: #525252;</p><p>    color: white;</p><p>}</p><p><br/></p><p><br/></p></body></html>"))
+        self.previousPageButton.setWhatsThis(_translate("MainWindow", "<html><head/><body><p>QPushButton{</p><p>    background-color: #e43f5a;</p><p>border: none;</p><p>  color: white;</p><p>  padding:10px;</p><p>  text-align: center;</p><p>  text-decoration: none;</p><p>  display: inline-block;</p><p>  font-size: 12px;</p><p>  margin: 4px 2px;</p><p>border-radius: 12px;</p><p>transition-duration: 0.8s;</p><p>}</p><p><br/></p><p>QPushButton:hover {</p><p>    background-color: #525252;</p><p>    color: white;</p><p>}</p><p><br/></p><p><br/></p></body></html>"))
         self.previousPageButton.setText(_translate("MainWindow", "Previous Page"))
         self.label_7.setText(_translate("MainWindow", "Page:"))
         self.pageNumberLineEdit.setWhatsThis(_translate("MainWindow", "<html><head/><body><p><br/></p></body></html>"))
