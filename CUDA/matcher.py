@@ -338,7 +338,8 @@ class Matcher:
 
             # calculating the number of blocks we need for our data
             grid_size = int((self.data.size/1024)**(0.5))
-
+            
+            
             # calling our kernel
             self.func(self.data_gpu, word_gpu, flag_gpu, length_gpu, grid = (grid_size + 1, grid_size + 1, 1), block=(32, 32,1))
 
@@ -396,7 +397,7 @@ class Matcher:
 
         malicious_domains = list()
         times = list()
-
+        cuda.Context.set_limit(cuda.limit.STACK_SIZE, 0)
         if hardware == 'GPU':
             if algorithm == 'Levenshtein':
                 for domain in domains:
@@ -412,6 +413,9 @@ class Matcher:
                     end = time.time()
                     times.append(end-start)
             else:
+                self.set_to_naive()
+                self.func = self.mod.get_function("kernel")
+                print(domains)
                 for domain in domains:
                     start = time.time()
                     malicious_domains.append(self.is_malicious_naive_gpu(domain))
@@ -440,6 +444,7 @@ class Matcher:
             times[i] = times[i] + times[i-1]
         print(malicious_domains)
         print(times)
+        cuda.Context.set_limit(cuda.limit.STACK_SIZE, 0)
         return malicious_domains, times
     def levenshteinlist(self, dom1, domlist):
         length = len(domlist)
@@ -563,12 +568,14 @@ class Matcher:
 
 
 def main():
-    domains = ['109-204-26-16.netconnexion.managedb', '109-204fdsafa-26-16.netconnexion.managedb', '109-204-26-16.netconeafewnexion.managedbfdwsf']
+    domains = ['109-204']
 
     matcher = Matcher('C:\\Users\\trevo\\Documents\\malicious-domain-detection\\localdata.csv')
 
     matcher.load_gpu()
 
-    matcher.is_malicious(domains, 'CPU', 'Hamming')
+    matcher.is_malicious(domains, 'GPU', 'Levenshtein')
+    #matcher.load_gpu()
+    matcher.is_malicious(domains, 'GPU', 'Naive')
 if __name__ == '__main__':
     main()

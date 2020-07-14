@@ -18,6 +18,8 @@ import pathlib
 dir_path = pathlib.Path(__file__).parent.absolute()
 import CUDA.matcher as matcher
 import gui_functions as gf
+
+import numpy
 class MplCanvas(FigureCanvasQTAgg):
 
     def __init__(self, parent=None, width=500, height=400, dpi=100):
@@ -46,7 +48,8 @@ class Ui_MainWindow(object):
 
     def generateRandomDataClicked(self):
         rdg = gen.Generator()
-        rdg.generate(1000)
+        rdg.generate(100000)
+
     def maliciousDatasetComboBoxChanged(self, value):
         self.dataLoadCounter = 0
         while self.domainTable.rowCount() > 0:
@@ -135,6 +138,8 @@ class Ui_MainWindow(object):
                 self.datasetComboBox.addItem(file[0])
     def createDomainList(self, domains, data_path):
         domain_list_pd = domains[self.path_column_num_dic[data_path]]
+        print('oof')
+        print(domain_list_pd)
         domain_list = []
         import random as rng
 
@@ -156,6 +161,7 @@ class Ui_MainWindow(object):
         if os.path.exists(data_path):
             domains = pd.read_csv(data_path, encoding = "ISO-8859-1", sep = ',', dtype='unicode', header = None)
             domain_list = self.createDomainList(domains, data_path)
+            print(domain_list)
             if  isinstance(domain_list, bool):
                 return
             if self.matcher is not None:
@@ -170,10 +176,14 @@ class Ui_MainWindow(object):
                 domains, times = self.matcher.is_malicious(domain_list, 'GPU', alg)
                 self.sc.setParent(None)
                 self.sc = MplCanvas(self, width=5, height=900, dpi=70)
-                self.sc.axes.plot([(i+1) for i in range(len(times))], times)
+                
+                self.sc.axes.plot([(i+1) for i in range(len(times))], times, label='GPU', linestyle='-.')
                 self.sc.axes.set_xlabel('# of Domains')
                 self.sc.axes.set_ylabel('Time (seconds)')
                 self.sc.axes.set_title(f'Time vs # of Domains using {alg} algorithm on GPU')
+                self.sc.axes.legend()
+
+                self.sc.axes.grid(True)
                 self.verticalLayout.addWidget(self.sc)
             else:
                 self.displayError('You need to load the gpu with data')
@@ -196,10 +206,13 @@ class Ui_MainWindow(object):
                 else:
                     alg = 'Naive'
                 domains, times = self.matcher.is_malicious(domain_list, 'CPU', alg)
-                self.sc.axes.plot([(i+1) for i in range(len(times))], times)
+                self.sc.axes.plot([(i+1) for i in range(len(times))], times, label='CPU', linestyle='-.')
                 self.sc.axes.set_xlabel('# of Domains')
                 self.sc.axes.set_ylabel('Time (seconds)')
                 self.sc.axes.set_title(f'Time vs # of Domains using {alg} algorithm on GPU and CPU')
+                self.sc.axes.legend()
+                
+                self.sc.axes.grid(True)
                 self.verticalLayout.addWidget(self.sc)
             else:
                 self.displayError('You need to load the gpu with data')
@@ -968,7 +981,7 @@ class Ui_MainWindow(object):
         spacerItem8 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         #self.verticalLayout.addItem(spacerItem8)
         self.sc = MplCanvas(self, width=5, height=900, dpi=70)
-        
+        self.sc.axes.grid(True)
         self.verticalLayout.addWidget(self.sc)
         self.horizontalLayout.addLayout(self.verticalLayout)
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
