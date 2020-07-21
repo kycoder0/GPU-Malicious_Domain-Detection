@@ -171,6 +171,8 @@ class Ui_MainWindow(object):
                     alg = 'Levenshtein'
                 elif 'Hamming' in currentAlgorithm:
                     alg = 'Hamming'
+                elif 'KMP' in currentAlgorithm:
+                    alg = 'KMP'
                 else:
                     alg = 'Naive'
                 domains, times = self.matcher.is_malicious(domain_list, 'GPU', alg)
@@ -1072,6 +1074,7 @@ class Ui_MainWindow(object):
         self.algorithmComboBox.addItem("Naive (Exact Match)")
         self.algorithmComboBox.addItem("Levenshtein (Closest Match)")
         self.algorithmComboBox.addItem("Hamming (Closest Match)")
+        self.algorithmComboBox.addItem("KMP (Exact Match)")
         self.algorithmComboBox.setObjectName("algorithmComboBox")
         self.verticalLayout_3.addWidget(self.algorithmComboBox)
         spacerItem11 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
