@@ -716,7 +716,7 @@ class Matcher:
         distances_changed = self.levenshteinlist(domain, self.data)
         return self.get_match_levenshtein(distances_changed)
 
-    def get_hamming_distance(self, domain1, domain2):
+    def get_hamming_distance_helper(self, domain1, domain2):
         smallest_len = min(len(domain1), len(domain2))
 
         count = 0
@@ -728,7 +728,7 @@ class Matcher:
 
         dist_list = []
         for do in self.data:
-            dist_list.append(self.get_hamming_distance(domain, do))
+            dist_list.append(self.get_hamming_distance_helper(domain, do))
         return self.get_match_levenshtein(dist_list)
         
     def time_diff(self, num_samples):

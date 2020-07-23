@@ -32,6 +32,35 @@ class Ui_MainWindow(object):
     current_md_dataset = ""
     current_page = 0
     matcher = None
+
+    def algorithmSpeedComparison(self):
+        data_path = self.datasetComboBox.currentText()
+        if os.path.exists(data_path):
+            domains = pd.read_csv(data_path, encoding = "ISO-8859-1", sep = ',', dtype='unicode', header = None)
+            domain_list = self.createDomainList(domains, data_path)
+            print(domain_list)
+            if  isinstance(domain_list, bool):
+                return
+
+            algs = ['Levenshtein', 'Hamming', 'KMP', 'Rabin-Karp', 'Naive']
+            self.sc.setParent(None)
+            self.sc = MplCanvas(self, width=5, height=900, dpi=70)
+            for alg in algs:
+                if self.matcher is not None:
+                    domains, times = self.matcher.is_malicious(domain_list, 'GPU', alg)
+                    self.sc.axes.plot([(i+1) for i in range(len(times))], times, label=alg, linestyle='-.')
+                    
+                else:
+                    self.displayError('You need to load the gpu with data')
+            self.sc.axes.set_xlabel('Number of Domains')
+            self.sc.axes.set_ylabel('Time (seconds)')
+            self.sc.axes.set_title(f'Comparison of Algorithms on GPU (Time vs Number of domains')
+            self.sc.axes.legend()
+
+            self.sc.axes.grid(True)
+            self.verticalLayout.addWidget(self.sc)
+        else:
+            self.displayError('Please select a valid dataset')
     def setupMatcher(self):
         db = gf.check_db_connection()
         gf.create_local_data(db)
@@ -57,9 +86,6 @@ class Ui_MainWindow(object):
         self.current_md_dataset = value
         self.updateTableView(value)
     def insertDataToDomainTable(self, data, path):
-
-        print('hello there')
-        
         high = self.dataLoadCounter + 1000
         print(len(data))
         print(self.dataLoadCounter)
@@ -182,9 +208,9 @@ class Ui_MainWindow(object):
                 self.sc = MplCanvas(self, width=5, height=900, dpi=70)
                 
                 self.sc.axes.plot([(i+1) for i in range(len(times))], times, label='GPU', linestyle='-.')
-                self.sc.axes.set_xlabel('# of Domains')
+                self.sc.axes.set_xlabel('Number of Domains')
                 self.sc.axes.set_ylabel('Time (seconds)')
-                self.sc.axes.set_title(f'Time vs # of Domains using {alg} algorithm on GPU')
+                self.sc.axes.set_title(f'Time vs Number of Domains using {alg} algorithm on GPU')
                 self.sc.axes.legend()
 
                 self.sc.axes.grid(True)
@@ -211,9 +237,9 @@ class Ui_MainWindow(object):
                     alg = 'Naive'
                 domains, times = self.matcher.is_malicious(domain_list, 'CPU', alg)
                 self.sc.axes.plot([(i+1) for i in range(len(times))], times, label='CPU', linestyle='-.')
-                self.sc.axes.set_xlabel('# of Domains')
+                self.sc.axes.set_xlabel('Number of Domains')
                 self.sc.axes.set_ylabel('Time (seconds)')
-                self.sc.axes.set_title(f'Time vs # of Domains using {alg} algorithm on GPU and CPU')
+                self.sc.axes.set_title(f'Time vs Number of Domains using {alg} algorithm on GPU and CPU')
                 self.sc.axes.legend()
                 
                 self.sc.axes.grid(True)
@@ -237,6 +263,7 @@ class Ui_MainWindow(object):
         self.startButton.clicked.connect(self.startProcessClicked)
         self.addDatasetButton.clicked.connect(self.addDatasetClick)
         self.speedTestButton.clicked.connect(self.speedTest)
+        self.algorithmSpeedTestButton.clicked.connect(self.algorithmSpeedComparison)
     def setupUi(self, MainWindow):
         self.dataLoadCounter = 0
         MainWindow.setObjectName("MainWindow")
