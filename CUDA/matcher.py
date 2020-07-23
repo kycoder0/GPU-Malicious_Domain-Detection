@@ -274,6 +274,60 @@ class Matcher:
             
         }
             """)
+#self.data_gpu, word_gpu, length_gpu, word_len_gpu, flag_gpu
+    def set_to_rabin_karp(self):
+        self.mod = SourceModule("""
+            #include <stdio.h>
+            #define d 256
+          __global__ void kernel(char *data, char *word, int *length, int *word_len, char *flag)
+          {
+            //dp[0][0] = 1;
+            int blockId = blockIdx.y * gridDim.x + blockIdx.x;
+            int distances_idx = (blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x);
+            int data_idx = length[0] * (blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x);
+
+            int M = *word_len;
+            int N = 0;
+
+            while (data[N * 4 + data_idx] != '\\0') {
+                N++;
+            }
+
+            int i, j;
+            int p = 0;
+            int t = 0;
+            int h = 1;
+            int q = 101;
+            
+            for (i = 0; i < M - 1; i++)
+                h = (h * d) % q;
+            
+            for (i = 0; i < M; i++) {
+                p = (d * p + word[i * 4]) % q;
+                t = (256 * t + data[i * 4 + data_idx]) % q;
+            }
+
+
+            for (i = 0; i <= N - M; i++) {
+                if (p == t) {
+                    for (j = 0; j < M; j++) {
+                        if (data[(i+j)*4 + data_idx] != word[j * 4])
+                            break;
+                    }
+
+                    if (j == M)
+                        flag[0] = 1;
+                }
+                if (i < N - M) {
+                    t = (d * (t - data[i * 4 + data_idx] * h) + data[(i+M)*4]) % q;
+
+                    if (t < 0)
+                        t = (t + q);
+                }
+            }
+
+        }
+            """)
     def get_levenshtein_distance(self, word):
         distances = [0 for x in range(len(self.data))]
         # dp = [[0 for x in range(self.max_length//4)] for i in range(self.max_length//4)]
@@ -496,6 +550,59 @@ class Matcher:
         cuda.memcpy_dtoh(word_len_changed, word_gpu)
         #cuda.memcpy_dtoh(dp_changed, dp_gpu)
         return flag_changed
+
+    def is_malicious_rabin_karp_gpu(self, word):
+        #distances = [0 for x in range(len(self.data))]
+        # dp = [[0 for x in range(self.max_length//4)] for i in range(self.max_length//4)]
+        #print(dp)
+         # initializing our variables
+        word_len = len(word)
+        word = numpy.asarray(word)
+        flag = numpy.asarray(0)
+        length = numpy.int32(self.max_length)
+        #distances = numpy.asarray(distances)
+        word_len =  numpy.int32(word_len)
+       # dp = numpy.asarray(dp)
+
+        # allocating memory for our variables on the GPU
+        word_gpu = cuda.mem_alloc(self.max_length * 8)
+        flag_gpu = cuda.mem_alloc(32)
+        length_gpu = cuda.mem_alloc(length.nbytes)
+        #distances_gpu = cuda.mem_alloc(len(self.data) * 32)
+        word_len_gpu = cuda.mem_alloc(word_len.nbytes)
+        #dp_gpu = cuda.mem_alloc(((self.max_length//4)**2) * 128)
+
+        # putting the variables into the GPU memory we allocated
+        cuda.memcpy_htod(word_gpu, word)
+        cuda.memcpy_htod(flag_gpu, flag)
+        cuda.memcpy_htod(length_gpu, length)
+        #cuda.memcpy_htod(distances_gpu, distances)
+        cuda.memcpy_htod(word_len_gpu, word_len)
+        #cuda.memcpy_htod(dp_gpu, dp)
+        # calculating the number of blocks we need for our data
+        grid_size = int((self.data.size/1024)**(0.5))
+
+        self.set_to_rabin_karp()
+        self.func = self.mod.get_function("kernel")
+        # calling our kernel
+        self.func(self.data_gpu, word_gpu, length_gpu, word_len_gpu, flag_gpu, grid = (grid_size + 1, grid_size + 1, 1), block=(32, 32,1))
+        #self.func(self.data_gpu, word_gpu, length_gpu, distances_gpu, word_len_gpu, grid = (1, 1, 1), block=(1, 1 ,1))
+        # cleaning the variables from our GPU, since we didn't clean up the
+        # database data, it is still stored on the GPU, ready for a new search
+        word_changed = numpy.empty_like(word)
+        flag_changed = numpy.empty_like(flag)
+        length_changed = numpy.empty_like(length)
+       # distances_changed = numpy.empty_like(distances)
+        word_len_changed = numpy.empty_like(word_len)
+        #dp_changed = numpy.empty_like(dp)
+
+        cuda.memcpy_dtoh(word_changed, word_gpu)
+        cuda.memcpy_dtoh(flag_changed, flag_gpu)
+        cuda.memcpy_dtoh(length_changed, length_gpu)
+        #cuda.memcpy_dtoh(distances_changed, distances_gpu)
+        cuda.memcpy_dtoh(word_len_changed, word_gpu)
+        #cuda.memcpy_dtoh(dp_changed, dp_gpu)
+        return flag_changed
     def is_malicious_kmp_cpu(self, word):
         pass
 
@@ -529,10 +636,16 @@ class Matcher:
                     malicious_domains.append(self.get_hamming_distance(domain))
                     end = time.time()
                     times.append(end-start)
-            elif algorithm == "KMP":
+            elif algorithm == 'KMP':
                 for domain in domains:
                     start = time.time()
                     malicious_domains.append(self.is_malicious_kmp_gpu(domain))
+                    end = time.time()
+                    times.append(end-start)
+            elif algorithm == 'Rabin-Karp':
+                for domain in domains:
+                    start = time.time()
+                    malicious_domains.append(self.is_malicious_rabin_karp_gpu(domain))
                     end = time.time()
                     times.append(end-start)
             else:
@@ -691,7 +804,7 @@ class Matcher:
 
 
 def main():
-    domains = ['easter', 'connex', 'fhoewahyf9aw48yf9y32498py9f8023hy']
+    domains = ['easter', 'con', 'fhoewahyf9aw48yf9y32498py9f8023hy']
 
     matcher = Matcher('C:\\Users\\trevo\\Documents\\malicious-domain-detection\\localdata.csv')
 
@@ -699,6 +812,6 @@ def main():
 
 
     #matcher.load_gpu()
-    matcher.is_malicious(domains, 'GPU', 'KMP')
+    matcher.is_malicious(domains, 'GPU', 'Rabin-Karp')
 if __name__ == '__main__':
     main()
