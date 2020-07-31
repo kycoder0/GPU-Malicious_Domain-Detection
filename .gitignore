@@ -6,3 +6,5 @@ localdata.csv
 *.html
 *.json
 .idea/
+output.txt
+extra_python.py

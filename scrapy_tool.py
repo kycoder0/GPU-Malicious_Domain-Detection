@@ -12,7 +12,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from bs4 import BeautifulSoup
 from subprocess import call
 import os
-
+import pickle
 import json
 class Ui_ScrapyTool(object):
 
@@ -52,12 +52,18 @@ class Ui_ScrapyTool(object):
             'type': 'Regex',
             'raw': self.regexTextEdit.toPlainText()
         })
+
+        data['url'] = self.urlLineEdit.text()
         with open('domains\\querySettings.json', 'w') as outfile:
             json.dump(data, outfile)
     def urlSearchButtonClicked(self):
         import urllib.request
         url = self.urlLineEdit.text()
-        fp = urllib.request.urlopen(url)
+        try:
+            fp = urllib.request.urlopen(url)
+        except:
+            print('Invalid URL')
+            return
         mybytes = fp.read()
         mystr = mybytes.decode(fp.headers.get_content_charset())
         fp.close()
@@ -66,8 +72,14 @@ class Ui_ScrapyTool(object):
         self.htmlText.insertPlainText(soup.prettify())
     def runQueryButtonClicked(self):
         self.dumpQuery()
-        name = "quotes"
+        name = "domains"
         call(["scrapy", "crawl", "{0}".format(name), "-o {0}.json".format(name)])
+        result = pickle.load(open('output.txt', 'rb'))
+        self.resultsTable.setRowCount(0)
+        self.resultsTable.setRowCount(len(result))
+        self.resultsTable.setColumnCount(1)
+        for index, item in enumerate(result):
+            self.resultsTable.setItem(index, 0, QtWidgets.QTableWidgetItem(result[index]))
     def cssRadioButtonToggled(self):
         print('henlo')
     def xPathRadioButtonToggled(self):
