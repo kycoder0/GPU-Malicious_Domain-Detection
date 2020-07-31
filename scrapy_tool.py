@@ -80,6 +80,9 @@ class Ui_ScrapyTool(object):
         self.resultsTable.setColumnCount(1)
         for index, item in enumerate(result):
             self.resultsTable.setItem(index, 0, QtWidgets.QTableWidgetItem(result[index]))
+        with open('output.csv', 'w') as out:
+            for item in result:
+                out.write(str(item)+'\n')
     def cssRadioButtonToggled(self):
         print('henlo')
     def xPathRadioButtonToggled(self):
@@ -101,7 +104,7 @@ class Ui_ScrapyTool(object):
         cwd = os.getcwd() + '\\'
         os.chdir(cwd + 'domains')
         ScrapyTool.setObjectName("ScrapyTool")
-        ScrapyTool.resize(600, 400)
+        ScrapyTool.resize(800, 600)
         self.gridLayout = QtWidgets.QGridLayout(ScrapyTool)
         self.gridLayout.setObjectName("gridLayout")
         self.tabWidget = QtWidgets.QTabWidget(ScrapyTool)
@@ -209,6 +212,8 @@ class Ui_ScrapyTool(object):
         self.retranslateUi(ScrapyTool)
         self.tabWidget.setCurrentIndex(0)
         self.setupOnClicks()
+        self.functionTextEdit.insertPlainText('''def extra_python(result): # you must have this function
+    return result''')
         QtCore.QMetaObject.connectSlotsByName(ScrapyTool)
 
     def retranslateUi(self, ScrapyTool):
