@@ -8,6 +8,8 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtCore import QUrl
 import os
 import pandas as pd
 from threading import Thread
@@ -18,8 +20,18 @@ import pathlib
 dir_path = pathlib.Path(__file__).parent.absolute()
 import CUDA.matcher as matcher
 import gui_functions as gf
+import scrapy_tool
 
-import numpy
+class Window2(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Window22222")
+        self.browser = QWebEngineView()
+        self.browser.setUrl(QUrl("http://www.google.com"))
+
+        self.setCentralWidget(self.browser)
+
+        self.show()
 class MplCanvas(FigureCanvasQTAgg):
 
     def __init__(self, parent=None, width=500, height=400, dpi=100):
@@ -49,7 +61,7 @@ class Ui_MainWindow(object):
                 if self.matcher is not None:
                     domains, times = self.matcher.is_malicious(domain_list, 'GPU', alg)
                     self.sc.axes.plot([(i+1) for i in range(len(times))], times, label=alg, linestyle='-.')
-                    
+
                 else:
                     self.displayError('You need to load the gpu with data')
             self.sc.axes.set_xlabel('Number of Domains')
@@ -77,7 +89,7 @@ class Ui_MainWindow(object):
 
     def generateRandomDataClicked(self):
         rdg = gen.Generator()
-        rdg.generate(100000)
+        rdg.generate(10000000)
 
     def maliciousDatasetComboBoxChanged(self, value):
         self.dataLoadCounter = 0
@@ -251,6 +263,17 @@ class Ui_MainWindow(object):
     def speedTest(self):
         self.startProcessClicked()
         self.executeCPU()
+    def window2(self):                                             # <===
+        self.w = Window2()
+        self.w.show()
+
+    def openScrapyClicked(self):
+        import sys
+        self.ScrapyTool = QtWidgets.QWidget()
+        self.ui = scrapy_tool.Ui_ScrapyTool()
+        self.ui.setupUi(self.ScrapyTool)
+        #self.ScrapyTool.urlSearchButton.clicked.connect(self.ScrapyTool.urlSearchButtonClicked)
+        self.ScrapyTool.show()
 
     def setupButtons(self):
         self.addNewDatasetButton.clicked.connect(self.addNewDatasetClick)
@@ -264,6 +287,7 @@ class Ui_MainWindow(object):
         self.addDatasetButton.clicked.connect(self.addDatasetClick)
         self.speedTestButton.clicked.connect(self.speedTest)
         self.algorithmSpeedTestButton.clicked.connect(self.algorithmSpeedComparison)
+        self.openScrapy.clicked.connect(self.openScrapyClicked)
     def setupUi(self, MainWindow):
         self.dataLoadCounter = 0
         MainWindow.setObjectName("MainWindow")
@@ -880,8 +904,8 @@ class Ui_MainWindow(object):
         self.dataTabMainLayoutV1.addWidget(self.goToPageButton)
         spacerItem5 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.dataTabMainLayoutV1.addItem(spacerItem5)
-        self.addButton = QtWidgets.QPushButton(self.dataTab)
-        self.addButton.setStyleSheet("QPushButton{\n"
+        self.openScrapy = QtWidgets.QPushButton(self.dataTab)
+        self.openScrapy.setStyleSheet("QPushButton{\n"
 "    background-color: #e43f5a;\n"
 "border: none;\n"
 "  color: white;\n"
@@ -901,54 +925,10 @@ class Ui_MainWindow(object):
 "}\n"
 "\n"
 "")
-        self.addButton.setObjectName("addButton")
-        self.dataTabMainLayoutV1.addWidget(self.addButton)
-        self.deleteEntryButton = QtWidgets.QPushButton(self.dataTab)
-        self.deleteEntryButton.setStyleSheet("QPushButton{\n"
-"    background-color: #e43f5a;\n"
-"border: none;\n"
-"  color: white;\n"
-"  padding:10px;\n"
-"  text-align: center;\n"
-"  text-decoration: none;\n"
-"  display: inline-block;\n"
-"  font-size: 12px;\n"
-"  margin: 4px 2px;\n"
-"border-radius: 12px;\n"
-"transition-duration: 0.8s;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    background-color: #525252;\n"
-"    color: white;\n"
-"}\n"
-"\n"
-"")
-        self.deleteEntryButton.setObjectName("deleteEntryButton")
-        self.dataTabMainLayoutV1.addWidget(self.deleteEntryButton)
-        self.undoButton = QtWidgets.QPushButton(self.dataTab)
-        self.undoButton.setStyleSheet("QPushButton{\n"
-"    background-color: #e43f5a;\n"
-"border: none;\n"
-"  color: white;\n"
-"  padding:10px;\n"
-"  text-align: center;\n"
-"  text-decoration: none;\n"
-"  display: inline-block;\n"
-"  font-size: 12px;\n"
-"  margin: 4px 2px;\n"
-"border-radius: 12px;\n"
-"transition-duration: 0.8s;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    background-color: #525252;\n"
-"    color: white;\n"
-"}\n"
-"\n"
-"")
-        self.undoButton.setObjectName("undoButton")
-        self.dataTabMainLayoutV1.addWidget(self.undoButton)
+        self.openScrapy.setObjectName("openScrapy")
+        self.dataTabMainLayoutV1.addWidget(self.openScrapy)
+        
+        
         self.dataTabMainLayout.addLayout(self.dataTabMainLayoutV1)
         self.gridLayout_2.addLayout(self.dataTabMainLayout, 0, 1, 1, 1)
         self.tabWidget.addTab(self.dataTab, "")
@@ -1279,9 +1259,7 @@ class Ui_MainWindow(object):
         self.label_7.setText(_translate("MainWindow", "Page:"))
         self.pageNumberLineEdit.setWhatsThis(_translate("MainWindow", "<html><head/><body><p><br/></p></body></html>"))
         self.goToPageButton.setText(_translate("MainWindow", "Go To Page"))
-        self.addButton.setText(_translate("MainWindow", "Add Entry"))
-        self.deleteEntryButton.setText(_translate("MainWindow", "Delete Entry"))
-        self.undoButton.setText(_translate("MainWindow", "Undo"))
+        self.openScrapy.setText(_translate("MainWindow", "Open Scrapy"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.dataTab), _translate("MainWindow", "Data"))
         self.label_3.setText(_translate("MainWindow", "Select Dataset to be tested:"))
         self.startButton.setText(_translate("MainWindow", "Start Process"))

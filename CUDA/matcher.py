@@ -9,7 +9,6 @@ import math
 import time
 import random
 import os
-#import resource
 import psutil
 import numpy as np
 class Matcher:
@@ -77,7 +76,7 @@ class Matcher:
         cuda.memcpy_htod(self.data_gpu, self.data)
         # print('max len = ' + str(len(max(self.data, key=len))))
         self.max_length = len(max(self.data, key=len)) * 4
-        
+
         self.func = self.mod.get_function("kernel")
         self.is_loaded = True
     def set_to_hamming(self):
@@ -112,7 +111,7 @@ class Matcher:
             distances[distances_idx] = diff;
         }
             """)
-    
+
     def set_to_levenshtein(self):
         self.mod = SourceModule("""
             #include <stdio.h>
@@ -218,7 +217,7 @@ class Matcher:
             int M = *word_len;
             int N = 0;
 
-            while (data[N * 4 + data_idx] != '\\0') {
+            while (N < length[0] && data[N * 4 + data_idx] != '\\0') {
                 N++;
             }
             //printf("%d\\n", N);
@@ -289,7 +288,7 @@ class Matcher:
             int M = *word_len;
             int N = 0;
 
-            while (data[N * 4 + data_idx] != '\\0') {
+            while (N < length[0] && data[N * 4 + data_idx] != '\\0') {
                 N++;
             }
 
@@ -382,7 +381,7 @@ class Matcher:
 
         highest_match = self.get_match_levenshtein(distances_changed)
         return highest_match # return if the flag has been changed to 1
-    
+
     def get_match_levenshtein(self, distances):
         print(distances)
         min_pos = min(range(len(distances)), key=distances.__getitem__)
@@ -460,8 +459,8 @@ class Matcher:
 
             # calculating the number of blocks we need for our data
             grid_size = int((self.data.size/1024)**(0.5))
-            
-            
+
+
             # calling our kernel
             self.func(self.data_gpu, word_gpu, flag_gpu, length_gpu, grid = (grid_size + 1, grid_size + 1, 1), block=(32, 32,1))
 
@@ -684,7 +683,7 @@ class Matcher:
         return malicious_domains, times
     def levenshteinlist(self, dom1, domlist):
         length = len(domlist)
-        distlist = [] 
+        distlist = []
         for i in range(length):
             distlist.append(self.levenshtein(dom1, domlist[i]))
         return distlist
@@ -730,7 +729,7 @@ class Matcher:
         for do in self.data:
             dist_list.append(self.get_hamming_distance_helper(domain, do))
         return self.get_match_levenshtein(dist_list)
-        
+
     def time_diff(self, num_samples):
         """
         Function to compare the average computation times of each algorithm
