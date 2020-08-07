@@ -54,7 +54,7 @@ class Ui_ScrapyTool(object):
         })
 
         data['url'] = self.urlLineEdit.text()
-        with open('domains\\querySettings.json', 'w') as outfile:
+        with open('domains\\querySettings.json', 'w+') as outfile:
             json.dump(data, outfile)
     def urlSearchButtonClicked(self):
         import urllib.request
@@ -218,7 +218,7 @@ class Ui_ScrapyTool(object):
 
     def retranslateUi(self, ScrapyTool):
         _translate = QtCore.QCoreApplication.translate
-        ScrapyTool.setWindowTitle(_translate("ScrapyTool", "Form"))
+        ScrapyTool.setWindowTitle(_translate("ScrapyTool", "Scrapy Tool"))
         self.label.setText(_translate("ScrapyTool", "Enter Url:"))
         self.urlSearchButton.setText(_translate("ScrapyTool", "Search"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("ScrapyTool", "Source"))

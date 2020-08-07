@@ -47,23 +47,103 @@ class Matcher:
             if(flag[0] == 1) {
                 return;
             }
-
             int blockId = blockIdx.y * gridDim.x + blockIdx.x;
             int idx = length[0] * (blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x);
             //printf("length:%d blockId:%d threadY:%d threadX:%d\\n", length[0], blockId, threadIdx.y, threadIdx.x);
             int tempFlag = 1;
-            for (int i = idx; i < length[0] + idx; i += 4) {
-                if (data[i] != word[i-idx]) {
-                    tempFlag = 0;
-                    break;
+            int M = 0;
+            int N = 0;
+
+            while (N < length[0] && data[N * 4 + idx] != '\\0') {
+                N++;
+            }
+
+            while (M < length[0] && word[M * 4] != '\\0') {
+                M++;
+            }
+            N--;
+            M--;
+
+            if (N <= 0 || M <= 0) {
+                return;
+            }
+
+            if (N > M) {
+                for (int j = 0; j < N - M; j++) {
+                    tempFlag = 1;
+                    for (int i = idx; i < M*4 + idx; i += 4) {
+                        
+                        if (data[i+j*4] != word[i-idx]) {
+                            //printf("%d %d %c %c\\n", j, i, data[i+j*4], word[i-idx]);
+                            tempFlag = 0;
+                            break;
+                        }
+                        //printf("%d %d %c %c %c\\n", j, i, data[i+j*4], word[i-idx], 'x');
+                    }
+                    if (tempFlag == 1) {
+                        break;
+                    }
                 }
             }
+            else if (N == M) {
+                tempFlag = 1;
+                for (int i = idx; i < M + idx; i += 4) {
+                    if (data[i] != word[i-idx]) {
+                        tempFlag = 0;
+                        break;
+                    }
+                }
+            }
+
+            else {
+                for (int j = 0; j < M - N; j++) {
+                    tempFlag = 1;
+                    for (int i = idx; i < N*4 + idx; i += 4) {
+                        
+                        if (data[i] != word[i-idx + j * 4]) {
+                            //printf("%d %d %c %c\\n", j, i, data[i], word[i-idx + j * 4]);
+                            tempFlag = 0;
+                            break;
+                        }
+                        //printf("%d %d %c %c %c\\n", j, i, data[i], word[i-idx + j * 4], 'x');
+                    }
+                    if (tempFlag == 1) {
+                        break;
+                    }
+                }
+            }
+            
             if(tempFlag == 1) {
                 flag[0] = 1;
             }
           }
           """)
         self.algorithm = 'Naive'
+
+    # def set_to_naive(self):
+    #     self.mod = SourceModule("""
+    #         #include <stdio.h>
+    #       __global__ void kernel(char *data, char *word, char *flag, int *length)
+    #       {
+    #         if(flag[0] == 1) {
+    #             return;
+    #         }
+    #         int blockId = blockIdx.y * gridDim.x + blockIdx.x;
+    #         int idx = length[0] * (blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x);
+    #         //printf("length:%d blockId:%d threadY:%d threadX:%d\\n", length[0], blockId, threadIdx.y, threadIdx.x);
+    #         int tempFlag = 1;
+    #         for (int i = idx; i < length[0] + idx; i += 4) {
+    #             if (data[i] != word[i-idx]) {
+    #                 tempFlag = 0;
+    #                 break;
+    #             }
+    #         }
+    #         if(tempFlag == 1) {
+    #             flag[0] = 1;
+    #         }
+    #       }
+    #       """)
+    #     self.algorithm = 'Naive'
     def set_algorithm(self, name):
         if name == 'Levenshtein':
             self.set_to_kmp()
@@ -803,7 +883,7 @@ class Matcher:
 
 
 def main():
-    domains = ['easter', 'con', 'fhoewahyf9aw48yf9y32498py9f8023hy']
+    domains = ['pokachi.net', 'poka','432423432423pokachi.net432432423423', '432809432047302489234']
 
     matcher = Matcher('C:\\Users\\trevo\\Documents\\malicious-domain-detection\\localdata.csv')
 
@@ -811,6 +891,6 @@ def main():
 
 
     #matcher.load_gpu()
-    matcher.is_malicious(domains, 'GPU', 'Rabin-Karp')
+    matcher.is_malicious(domains, 'GPU', 'Naive')
 if __name__ == '__main__':
     main()
