@@ -31,14 +31,9 @@ Guide: <br>
 | 00.1.0100   | 123domain123.com | 2020-06-12T16:26:19+00:00 |
 
 * Clone this repo onto your computer <br>
-```
-git clone https://github.com/TrevorRice39/malicious-domain-detection.git
-``` 
+
 * Ensure that your server is running with a valid database, and you can run 
     ```
     python3 main.py
     ```
     And the program should start.
-
-## <span style="color:maroon">Eastern Kentucky Univeristy</span>
-### Author: Trevor Rice
