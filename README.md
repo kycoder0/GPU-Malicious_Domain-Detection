@@ -37,3 +37,8 @@ Guide: <br>
     python3 main.py
     ```
     And the program should start.
+
+
+
+This code is based on the research paper: Trevor Rice, Dae Wook Kim, Mengkun Yang, "Developing a GUI Application: GPU-Accelerated Malicious Domain Detection", presented at the ACM Southeast Conference, Richmond, KY, April 13, 2023. If you use the source codes in your research or publications, please cite our paper.
+
